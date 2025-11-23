@@ -986,11 +986,11 @@ class EigenvectorApp {
         const color = idx === 0 ? '#06B6D4' : '#EC4899';
         const spaceNum = idx + 1;
 
-        // Position card in top-left corner
-        const x = 40;
-        const y = 40;
+        // Position card in center-top area (visible on canvas)
         const width = 320;
         const height = 160;
+        const x = (this.width - width) / 2; // Center horizontally
+        const y = 60; // Top of canvas with some margin
 
         // Draw card background
         this.ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
