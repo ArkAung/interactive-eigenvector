@@ -187,6 +187,9 @@ class EigenvectorApp {
         this.dragStartPos = null;
         this.draggedVectorIndex = -1;
 
+        // Determinant visualization toggle
+        this.showDeterminant = true;
+
         this.setupInputListeners();
         this.setupScrubber();
         this.setupPresetChips();
@@ -687,6 +690,13 @@ class EigenvectorApp {
         }
     }
 
+    toggleDeterminant(enabled) {
+        this.showDeterminant = enabled;
+        if (!this.isAnimating) {
+            this.draw();
+        }
+    }
+
     updateProgressUI() {
         const progress = document.getElementById('scrubberProgress');
         const handle = document.getElementById('scrubberHandle');
@@ -721,6 +731,9 @@ class EigenvectorApp {
         // Layer 1: Background elements
         this.drawGrid();
         this.drawAxes();
+        if (this.showDeterminant) {
+            this.drawDeterminantVisualization(isDimmed); // Determinant square/parallelogram
+        }
         this.drawGhostTrails(isDimmed);
 
         // Layer 2: Eigenvectors (draw first so their labels are visible)
@@ -736,10 +749,13 @@ class EigenvectorApp {
             this.drawEigenInfoCard();
         }
 
-        // Layer 5: Test vector hover arc (draw last so it's on top)
+        // Layer 5: Test vector hover arc and info cards (draw last so on top)
         if (this.hoveredVectorIndex >= 0 && !isDimmed) {
             const vec = this.testVectors[this.hoveredVectorIndex];
             this.drawRotationArc(vec.x, vec.y);
+        }
+        if (this.showDeterminant) {
+            this.drawDeterminantInfoCard(); // Show determinant info if enabled
         }
     }
 
@@ -1138,6 +1154,150 @@ class EigenvectorApp {
         if (isHovering) {
             this.canvas.style.cursor = 'pointer';
         }
+    }
+
+    drawDeterminantVisualization(isDimmed = false) {
+        const det = this.currentMatrix.determinant();
+        const opacity = isDimmed ? 0.1 : 0.2;
+
+        // Determine color based on determinant value
+        let fillColor;
+        if (Math.abs(det) < 0.01) {
+            // Singular matrix (near zero determinant)
+            fillColor = `rgba(245, 158, 11, ${opacity})`; // Orange
+        } else if (det < 0) {
+            // Orientation flip
+            fillColor = `rgba(239, 68, 68, ${opacity})`; // Red
+        } else if (det > 1) {
+            // Expansion
+            fillColor = `rgba(16, 185, 129, ${opacity})`; // Green
+        } else {
+            // Compression (0 < det < 1)
+            fillColor = `rgba(59, 130, 246, ${opacity})`; // Blue
+        }
+
+        // Draw original unit square (faded gray)
+        const unitSquare = [
+            { x: 0, y: 0 },
+            { x: 1, y: 0 },
+            { x: 1, y: 1 },
+            { x: 0, y: 1 }
+        ];
+
+        this.ctx.strokeStyle = `rgba(156, 163, 175, ${0.4 * (isDimmed ? 0.5 : 1)})`;
+        this.ctx.fillStyle = `rgba(156, 163, 175, ${0.08 * (isDimmed ? 0.5 : 1)})`;
+        this.ctx.lineWidth = 1.5;
+        this.ctx.setLineDash([4, 4]);
+
+        this.ctx.beginPath();
+        unitSquare.forEach((point, i) => {
+            const screen = this.toScreenCoords(point.x, point.y);
+            if (i === 0) {
+                this.ctx.moveTo(screen.x, screen.y);
+            } else {
+                this.ctx.lineTo(screen.x, screen.y);
+            }
+        });
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        this.ctx.setLineDash([]);
+
+        // Draw transformed parallelogram
+        const transformedSquare = unitSquare.map(point => {
+            const transformed = this.currentMatrix.transform(point.x, point.y);
+            return this.toScreenCoords(transformed.x, transformed.y);
+        });
+
+        this.ctx.fillStyle = fillColor;
+        this.ctx.strokeStyle = fillColor.replace(/[\d.]+\)$/, '0.6)'); // More opaque border
+        this.ctx.lineWidth = 2;
+
+        this.ctx.beginPath();
+        transformedSquare.forEach((point, i) => {
+            if (i === 0) {
+                this.ctx.moveTo(point.x, point.y);
+            } else {
+                this.ctx.lineTo(point.x, point.y);
+            }
+        });
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+    }
+
+    drawDeterminantInfoCard() {
+        const det = this.currentMatrix.determinant();
+
+        // Position card in bottom-right area
+        const width = 280;
+        const height = 140;
+        const x = this.width - width - 40;
+        const y = this.height - height - 120; // Above timeline control
+
+        // Glassmorphism card background
+        this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+        this.ctx.lineWidth = 1;
+
+        // Draw card with rounded corners
+        const radius = 16;
+        this.ctx.beginPath();
+        this.ctx.moveTo(x + radius, y);
+        this.ctx.lineTo(x + width - radius, y);
+        this.ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+        this.ctx.lineTo(x + width, y + height - radius);
+        this.ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+        this.ctx.lineTo(x + radius, y + height);
+        this.ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+        this.ctx.lineTo(x, y + radius);
+        this.ctx.quadraticCurveTo(x, y, x + radius, y);
+        this.ctx.closePath();
+        this.ctx.fill();
+        this.ctx.stroke();
+
+        // Title
+        this.ctx.fillStyle = '#9CA3AF';
+        this.ctx.font = '13px "Inter", sans-serif';
+        this.ctx.fillText('Determinant', x + 20, y + 28);
+
+        // Determinant value (large)
+        this.ctx.fillStyle = '#F3F4F6';
+        this.ctx.font = 'bold 28px "JetBrains Mono", monospace';
+        this.ctx.fillText(`det(A) = ${det.toFixed(3)}`, x + 20, y + 60);
+
+        // Area interpretation
+        const absDet = Math.abs(det);
+        let areaText;
+        if (absDet > 1) {
+            areaText = `Area expanded by ${absDet.toFixed(2)}×`;
+        } else if (absDet < 1 && absDet > 0.01) {
+            areaText = `Area compressed to ${absDet.toFixed(2)}×`;
+        } else if (absDet < 0.01) {
+            areaText = 'Area collapsed to zero';
+        }
+
+        this.ctx.fillStyle = '#D1D5DB';
+        this.ctx.font = '14px "Inter", sans-serif';
+        this.ctx.fillText(areaText, x + 20, y + 85);
+
+        // Orientation indicator
+        let orientationText, orientationColor;
+        if (Math.abs(det) < 0.01) {
+            orientationText = '⚠ SINGULAR - Dimension Collapse';
+            orientationColor = '#F59E0B'; // Orange
+        } else if (det < 0) {
+            orientationText = '↻ Orientation Flipped';
+            orientationColor = '#EF4444'; // Red
+        } else {
+            orientationText = '✓ Orientation Preserved';
+            orientationColor = '#10B981'; // Green
+        }
+
+        this.ctx.fillStyle = orientationColor;
+        this.ctx.font = 'bold 13px "Inter", sans-serif';
+        this.ctx.fillText(orientationText, x + 20, y + 110);
     }
 
     drawRotationArc(x, y) {
