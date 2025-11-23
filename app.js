@@ -746,7 +746,7 @@ class EigenvectorApp {
         this.drawGrid();
         this.drawAxes();
         if (this.showDeterminant) {
-            this.drawDeterminantVisualization(isDimmed); // Determinant square/parallelogram
+            this.drawDeterminantVisualization(isDimmed, this.hoveredEigenvectorIndex); // Determinant square/parallelogram
         }
         this.drawGhostTrails(isDimmed);
 
@@ -1170,9 +1170,10 @@ class EigenvectorApp {
         }
     }
 
-    drawDeterminantVisualization(isDimmed = false) {
+    drawDeterminantVisualization(isDimmed = false, hoveredEigenvectorIndex = -1) {
         const det = this.currentMatrix.determinant();
         const opacity = isDimmed ? 0.1 : 0.2;
+        const eigenvectors = this.targetMatrix.getEigenvectors();
 
         // Determine color based on determinant value
         let fillColor;
@@ -1239,14 +1240,71 @@ class EigenvectorApp {
         this.ctx.closePath();
         this.ctx.fill();
         this.ctx.stroke();
+
+        // Draw interactive eigenvector-determinant connection when hovering
+        if (hoveredEigenvectorIndex >= 0 && eigenvectors) {
+            const isFirstEigen = hoveredEigenvectorIndex === 0;
+            const eigenVec = isFirstEigen ? eigenvectors.v1 : eigenvectors.v2;
+            const eigenVal = isFirstEigen ? eigenvectors.lambda1 : eigenvectors.lambda2;
+            const eigenColor = isFirstEigen ? '#06B6D4' : '#EC4899'; // Cyan or Pink
+
+            // Draw dimension line along eigenvector direction
+            const scale = 3; // Match eigenvector display scale
+            const eigMathEnd = {
+                x: eigenVec.x * scale * Math.sign(eigenVal),
+                y: eigenVec.y * scale * Math.sign(eigenVal)
+            };
+            const transformed = this.currentMatrix.transform(eigMathEnd.x, eigMathEnd.y);
+            const origin = this.toScreenCoords(0, 0);
+            const end = this.toScreenCoords(transformed.x, transformed.y);
+
+            // Draw thick highlighted dimension line
+            this.ctx.strokeStyle = eigenColor;
+            this.ctx.lineWidth = 4;
+            this.ctx.shadowBlur = 15;
+            this.ctx.shadowColor = eigenColor;
+            this.ctx.setLineDash([8, 4]);
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(origin.x, origin.y);
+            this.ctx.lineTo(end.x, end.y);
+            this.ctx.stroke();
+
+            this.ctx.setLineDash([]);
+            this.ctx.shadowBlur = 0;
+
+            // Draw dimension annotation
+            const midX = (origin.x + end.x) / 2;
+            const midY = (origin.y + end.y) / 2;
+            const length = Math.sqrt(Math.pow(transformed.x, 2) + Math.pow(transformed.y, 2));
+
+            // Background for label
+            this.ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            const labelText = `Scales by λ${isFirstEigen ? '₁' : '₂'} = ${Math.abs(eigenVal).toFixed(2)}`;
+            this.ctx.font = 'bold 13px "Inter", sans-serif';
+            const metrics = this.ctx.measureText(labelText);
+            const padding = 8;
+
+            this.ctx.fillRect(
+                midX - metrics.width / 2 - padding,
+                midY - 25,
+                metrics.width + padding * 2,
+                22
+            );
+
+            // Label text
+            this.ctx.fillStyle = eigenColor;
+            this.ctx.fillText(labelText, midX - metrics.width / 2, midY - 10);
+        }
     }
 
     drawDeterminantInfoCard() {
         const det = this.currentMatrix.determinant();
+        const eigenvectors = this.targetMatrix.getEigenvectors();
 
         // Position card above the legend in bottom-right area
         const width = 280;
-        const height = 140;
+        const height = eigenvectors ? 170 : 140; // Taller if showing eigenvalue equation
         const x = this.width - width - 40; // Right side with margin (matching legend)
         const y = this.height - height - 220; // Above legend box (legend is at bottom: 24px + its height)
 
@@ -1281,6 +1339,39 @@ class EigenvectorApp {
         this.ctx.font = 'bold 28px "JetBrains Mono", monospace';
         this.ctx.fillText(`det(A) = ${det.toFixed(3)}`, x + 20, y + 60);
 
+        // Eigenvalue product equation (if eigenvalues exist)
+        let yOffset = 85; // Default offset for area text
+        if (eigenvectors) {
+            const lambda1 = eigenvectors.lambda1;
+            const lambda2 = eigenvectors.lambda2;
+
+            this.ctx.font = '13px "JetBrains Mono", monospace';
+
+            // Highlight hovered eigenvalue
+            const eqText = `= λ₁ × λ₂ = `;
+            this.ctx.fillStyle = '#9CA3AF';
+            this.ctx.fillText(eqText, x + 20, y + 82);
+            const eqWidth = this.ctx.measureText(eqText).width;
+
+            // Lambda 1
+            const lambda1Text = `${lambda1.toFixed(2)}`;
+            this.ctx.fillStyle = this.hoveredEigenvectorIndex === 0 ? '#06B6D4' : '#9CA3AF';
+            this.ctx.fillText(lambda1Text, x + 20 + eqWidth, y + 82);
+            const lambda1Width = this.ctx.measureText(lambda1Text).width;
+
+            // Multiplication sign
+            this.ctx.fillStyle = '#9CA3AF';
+            this.ctx.fillText(' × ', x + 20 + eqWidth + lambda1Width, y + 82);
+            const multWidth = this.ctx.measureText(' × ').width;
+
+            // Lambda 2
+            const lambda2Text = `${lambda2.toFixed(2)}`;
+            this.ctx.fillStyle = this.hoveredEigenvectorIndex === 1 ? '#EC4899' : '#9CA3AF';
+            this.ctx.fillText(lambda2Text, x + 20 + eqWidth + lambda1Width + multWidth, y + 82);
+
+            yOffset = 107; // Move area text down
+        }
+
         // Area interpretation
         const absDet = Math.abs(det);
         let areaText;
@@ -1294,7 +1385,7 @@ class EigenvectorApp {
 
         this.ctx.fillStyle = '#D1D5DB';
         this.ctx.font = '14px "Inter", sans-serif';
-        this.ctx.fillText(areaText, x + 20, y + 85);
+        this.ctx.fillText(areaText, x + 20, y + yOffset);
 
         // Orientation indicator
         let orientationText, orientationColor;
@@ -1311,7 +1402,7 @@ class EigenvectorApp {
 
         this.ctx.fillStyle = orientationColor;
         this.ctx.font = 'bold 13px "Inter", sans-serif';
-        this.ctx.fillText(orientationText, x + 20, y + 110);
+        this.ctx.fillText(orientationText, x + 20, y + yOffset + 25);
     }
 
     drawRotationArc(x, y) {
