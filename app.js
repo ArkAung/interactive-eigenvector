@@ -190,6 +190,11 @@ class EigenvectorApp {
         // Determinant visualization toggle
         this.showDeterminant = true;
 
+        // Eigenvector dragging state
+        this.isDraggingEigenvector = false;
+        this.draggedEigenvectorIndex = -1; // 0 for v1, 1 for v2
+        this.eigenvectorDragMode = false; // Flag to prevent circular updates
+
         this.setupInputListeners();
         this.setupScrubber();
         this.setupPresetChips();
@@ -279,6 +284,51 @@ class EigenvectorApp {
                 x: e.clientX - rect.left,
                 y: e.clientY - rect.top
             };
+
+            // Handle dragging eigenvector
+            if (this.isDraggingEigenvector && this.draggedEigenvectorIndex >= 0) {
+                const mathCoords = this.toMathCoords(this.mousePos.x, this.mousePos.y);
+                const eigenvectors = this.targetMatrix.getEigenvectors();
+
+                if (eigenvectors) {
+                    // Calculate new eigenvector direction (normalized)
+                    const magnitude = Math.sqrt(mathCoords.x * mathCoords.x + mathCoords.y * mathCoords.y);
+                    if (magnitude > 0.1) { // Minimum distance threshold
+                        const newDirection = {
+                            x: mathCoords.x / magnitude,
+                            y: mathCoords.y / magnitude
+                        };
+                        const newEigenvalue = magnitude / 3; // Scale factor (eigenvectors displayed at scale=3)
+
+                        // Get the other eigenvector (not being dragged)
+                        const v1 = this.draggedEigenvectorIndex === 0 ? newDirection : eigenvectors.v1;
+                        const lambda1 = this.draggedEigenvectorIndex === 0 ? newEigenvalue : eigenvectors.lambda1;
+                        const v2 = this.draggedEigenvectorIndex === 1 ? newDirection : eigenvectors.v2;
+                        const lambda2 = this.draggedEigenvectorIndex === 1 ? newEigenvalue : eigenvectors.lambda2;
+
+                        // Reconstruct matrix
+                        const newMatrix = this.reconstructMatrixFromEigenvectors(v1, lambda1, v2, lambda2);
+
+                        if (newMatrix) {
+                            // Valid matrix - update everything
+                            this.eigenvectorDragMode = true; // Prevent circular updates
+                            this.targetMatrix = newMatrix;
+                            this.currentMatrix = newMatrix; // Immediate update (no animation during drag)
+
+                            // Update matrix input fields
+                            this.updateMatrixInputFields(newMatrix);
+                            this.updateInfo();
+
+                            this.eigenvectorDragMode = false;
+                        }
+                    }
+                }
+
+                if (!this.isAnimating) {
+                    this.draw();
+                }
+                return;
+            }
 
             // Handle dragging existing custom vector
             if (this.isDraggingExistingVector && this.draggedVectorIndex >= 0) {
@@ -380,11 +430,15 @@ class EigenvectorApp {
 
             if (hoveringDelete) {
                 this.canvas.style.cursor = 'pointer';
+            } else if (this.isDraggingEigenvector) {
+                this.canvas.style.cursor = 'grabbing';
             } else if (this.isDraggingNewVector) {
                 this.canvas.style.cursor = 'crosshair';
             } else if (this.isDraggingExistingVector) {
                 this.canvas.style.cursor = 'move';
-            } else if (this.hoveredVectorIndex >= 0 || this.hoveredEigenvectorIndex >= 0) {
+            } else if (this.hoveredEigenvectorIndex >= 0) {
+                this.canvas.style.cursor = 'grab'; // Grab cursor when hovering eigenvector
+            } else if (this.hoveredVectorIndex >= 0) {
                 this.canvas.style.cursor = 'pointer';
             } else {
                 this.canvas.style.cursor = 'crosshair'; // Default to crosshair for drawing
@@ -397,6 +451,33 @@ class EigenvectorApp {
             const screenX = e.clientX - rect.left;
             const screenY = e.clientY - rect.top;
             const mathCoords = this.toMathCoords(screenX, screenY);
+
+            // Check if clicking on eigenvector endpoint
+            const eigenvectors = this.targetMatrix.getEigenvectors();
+            if (eigenvectors) {
+                const scale = 3;
+                const eigenVecs = [
+                    { x: eigenvectors.v1.x * scale, y: eigenvectors.v1.y * scale, idx: 0 },
+                    { x: -eigenvectors.v1.x * scale, y: -eigenvectors.v1.y * scale, idx: 0 },
+                    { x: eigenvectors.v2.x * scale, y: eigenvectors.v2.y * scale, idx: 1 },
+                    { x: -eigenvectors.v2.x * scale, y: -eigenvectors.v2.y * scale, idx: 1 }
+                ];
+
+                for (const vec of eigenVecs) {
+                    const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                    const end = this.toScreenCoords(transformed.x, transformed.y);
+
+                    const dx = screenX - end.x;
+                    const dy = screenY - end.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance <= this.hoverRadius * 1.5) {
+                        this.isDraggingEigenvector = true;
+                        this.draggedEigenvectorIndex = vec.idx;
+                        return; // Start dragging eigenvector
+                    }
+                }
+            }
 
             // Check if clicking on delete button
             let clickedDelete = false;
@@ -462,8 +543,10 @@ class EigenvectorApp {
 
             this.isDraggingNewVector = false;
             this.isDraggingExistingVector = false;
+            this.isDraggingEigenvector = false;
             this.dragStartPos = null;
             this.draggedVectorIndex = -1;
+            this.draggedEigenvectorIndex = -1;
 
             if (!this.isAnimating) {
                 this.draw();
@@ -487,13 +570,16 @@ class EigenvectorApp {
 
         this.targetMatrix = new Matrix2D(a, b, c, d);
 
-        // Clear custom vectors when matrix values change
-        this.customVectors = [];
+        // Skip these operations when dragging eigenvectors (to prevent circular updates)
+        if (!this.eigenvectorDragMode) {
+            // Clear custom vectors when matrix values change
+            this.customVectors = [];
 
-        // Clear active preset selection when entering custom values
-        document.querySelectorAll('.preset-chip').forEach(chip => {
-            chip.classList.remove('active');
-        });
+            // Clear active preset selection when entering custom values
+            document.querySelectorAll('.preset-chip').forEach(chip => {
+                chip.classList.remove('active');
+            });
+        }
 
         this.updateInfo();
 
@@ -709,6 +795,64 @@ class EigenvectorApp {
         if (!this.isAnimating) {
             this.draw();
         }
+    }
+
+    reconstructMatrixFromEigenvectors(v1, lambda1, v2, lambda2) {
+        // Build P matrix (eigenvectors as columns): P = [v1 v2]
+        // P = [[v1.x, v2.x],
+        //      [v1.y, v2.y]]
+
+        const detP = v1.x * v2.y - v1.y * v2.x;
+
+        // Check if eigenvectors are (nearly) parallel - singular matrix
+        if (Math.abs(detP) < 0.05) {
+            return null; // Invalid configuration
+        }
+
+        // Compute P^(-1) = 1/det(P) * [[v2.y, -v2.x], [-v1.y, v1.x]]
+        const invDetP = 1 / detP;
+        const P_inv = {
+            a: v2.y * invDetP,
+            b: -v2.x * invDetP,
+            c: -v1.y * invDetP,
+            d: v1.x * invDetP
+        };
+
+        // Compute A = P * D * P^(-1)
+        // Where D = [[lambda1, 0], [0, lambda2]]
+
+        // First: P * D = [[v1.x * lambda1, v2.x * lambda2],
+        //                  [v1.y * lambda1, v2.y * lambda2]]
+        const PD = {
+            a: v1.x * lambda1,
+            b: v2.x * lambda2,
+            c: v1.y * lambda1,
+            d: v2.y * lambda2
+        };
+
+        // Then: (P * D) * P^(-1)
+        const a = PD.a * P_inv.a + PD.b * P_inv.c;
+        const b = PD.a * P_inv.b + PD.b * P_inv.d;
+        const c = PD.c * P_inv.a + PD.d * P_inv.c;
+        const d = PD.c * P_inv.b + PD.d * P_inv.d;
+
+        return new Matrix2D(a, b, c, d);
+    }
+
+    updateMatrixInputFields(matrix) {
+        // Update the matrix input fields without triggering input events
+        const inputs = {
+            a11: document.getElementById('a11'),
+            a12: document.getElementById('a12'),
+            a21: document.getElementById('a21'),
+            a22: document.getElementById('a22')
+        };
+
+        // Format to 2 decimal places for readability
+        inputs.a11.value = matrix.a.toFixed(2);
+        inputs.a12.value = matrix.b.toFixed(2);
+        inputs.a21.value = matrix.c.toFixed(2);
+        inputs.a22.value = matrix.d.toFixed(2);
     }
 
     updateProgressUI() {
