@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eigenvector Visualization</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+            color: #00d9ff;
+        }
+
+        .subtitle {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #aaa;
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .controls-panel {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+        }
+
+        .canvas-container {
+            background: #0f3460;
+            border-radius: 10px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        canvas {
+            background: #1a1a2e;
+            border-radius: 5px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .section {
+            margin-bottom: 25px;
+        }
+
+        .section h3 {
+            color: #00d9ff;
+            margin-bottom: 12px;
+            font-size: 16px;
+            border-bottom: 2px solid #00d9ff;
+            padding-bottom: 5px;
+        }
+
+        .matrix-input {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .matrix-input input {
+            background: #0f3460;
+            border: 1px solid #00d9ff;
+            color: #fff;
+            padding: 8px;
+            border-radius: 5px;
+            font-size: 14px;
+            text-align: center;
+            width: 100%;
+            -moz-appearance: textfield;
+        }
+
+        .matrix-input input::-webkit-outer-spin-button,
+        .matrix-input input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .matrix-input input:focus {
+            outline: none;
+            border-color: #ff6b6b;
+        }
+
+        .preset-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 8px;
+        }
+
+        button {
+            background: #00d9ff;
+            color: #1a1a2e;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #00b8d4;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .control-buttons button.play {
+            background: #4caf50;
+            grid-column: 1 / -1;
+        }
+
+        .control-buttons button.reset {
+            background: #ff6b6b;
+        }
+
+        .slider-control {
+            margin-top: 10px;
+        }
+
+        .slider-control label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 13px;
+            color: #aaa;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+
+        .info-panel {
+            background: #0f3460;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            font-size: 12px;
+            line-height: 1.6;
+        }
+
+        .info-panel h4 {
+            color: #00d9ff;
+            margin-bottom: 8px;
+        }
+
+        .eigenvalue-display {
+            background: #1a1a2e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+
+        .eigenvalue-display div {
+            margin: 4px 0;
+        }
+
+        .legend {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 15px;
+            font-size: 13px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+        }
+
+        @media (max-width: 900px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Eigenvector Visualizer</h1>
+        <p class="subtitle">Explore linear transformations and eigenvectors interactively</p>
+
+        <div class="main-content">
+            <div class="controls-panel">
+                <div class="section">
+                    <h3>Transformation Matrix</h3>
+                    <div class="matrix-input">
+                        <input type="number" id="a11" value="2" step="0.1">
+                        <input type="number" id="a12" value="1" step="0.1">
+                        <input type="number" id="a21" value="1" step="0.1">
+                        <input type="number" id="a22" value="2" step="0.1">
+                    </div>
+                    <div class="control-buttons">
+                        <button class="play" onclick="app.playAnimation()">▶ Play Animation</button>
+                        <button onclick="app.stepForward()">Step →</button>
+                        <button class="reset" onclick="app.reset()">↺ Reset</button>
+                    </div>
+                    <div class="slider-control">
+                        <label>Animation Speed: <span id="speedValue">1.0</span>x</label>
+                        <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1"
+                               oninput="app.setSpeed(this.value)">
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Preset Transformations</h3>
+                    <div class="preset-buttons">
+                        <button onclick="app.loadPreset('rotation')">🔄 Rotation (90°)</button>
+                        <button onclick="app.loadPreset('scaling')">⤢ Scaling (2x)</button>
+                        <button onclick="app.loadPreset('shearX')">⇉ Shear X</button>
+                        <button onclick="app.loadPreset('shearY')">⇊ Shear Y</button>
+                        <button onclick="app.loadPreset('reflection')">↔ Reflection (X-axis)</button>
+                        <button onclick="app.loadPreset('projection')">⊡ Projection</button>
+                        <button onclick="app.loadPreset('squeeze')">⇔ Squeeze Mapping</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h3>Information</h3>
+                    <div class="info-panel">
+                        <h4>Current Transformation</h4>
+                        <div id="transformInfo">Select a preset or enter custom values</div>
+                        <div class="eigenvalue-display" id="eigenInfo">
+                            <div>Calculating eigenvalues...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="canvas-container">
+                <canvas id="canvas" width="800" height="800"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #555;"></div>
+                        <span>Grid</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #00d9ff;"></div>
+                        <span>Eigenvector 1</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff6b6b;"></div>
+                        <span>Eigenvector 2</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffeb3b;"></div>
+                        <span>Test Vectors</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
