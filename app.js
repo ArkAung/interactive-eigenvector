@@ -194,8 +194,17 @@ class EigenvectorApp {
         this.setupScrubber();
         this.setupPresetChips();
         this.setupMouseTracking();
+        this.syncDeterminantCheckbox();
         this.updateMatrixFromInputs();
         this.draw();
+    }
+
+    syncDeterminantCheckbox() {
+        // Sync the checkbox state with the internal state on page load
+        const checkbox = document.getElementById('showDeterminant');
+        if (checkbox) {
+            this.showDeterminant = checkbox.checked;
+        }
     }
 
     resizeCanvas() {
@@ -1230,11 +1239,11 @@ class EigenvectorApp {
     drawDeterminantInfoCard() {
         const det = this.currentMatrix.determinant();
 
-        // Position card in bottom-center area (to avoid both left and right panels)
+        // Position card above the legend in bottom-right area
         const width = 280;
         const height = 140;
-        const x = (this.width - width) / 2; // Centered horizontally
-        const y = this.height - height - 180; // Above timeline control with more clearance
+        const x = this.width - width - 40; // Right side with margin (matching legend)
+        const y = this.height - height - 220; // Above legend box (legend is at bottom: 24px + its height)
 
         // Glassmorphism card background
         this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
