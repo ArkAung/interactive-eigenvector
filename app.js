@@ -988,7 +988,7 @@ class EigenvectorApp {
 
         // Position card in center-top area (visible on canvas)
         const width = 320;
-        const height = 160;
+        const height = 185;
         const x = (this.width - width) / 2; // Center horizontally
         const y = 60; // Top of canvas with some margin
 
