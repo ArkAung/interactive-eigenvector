@@ -174,46 +174,33 @@
             background: rgba(15, 23, 42, 0.9);
         }
 
-        /* Preset Carousel */
+        /* Preset Grid */
         .preset-carousel {
             margin-bottom: 24px;
         }
 
-        .preset-scroll {
-            display: flex;
-            gap: 8px;
-            overflow-x: auto;
-            padding: 4px 0 12px 0;
-            margin: 0 -4px;
-        }
-
-        .preset-scroll::-webkit-scrollbar {
-            height: 6px;
-        }
-
-        .preset-scroll::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 3px;
-        }
-
-        .preset-scroll::-webkit-scrollbar-thumb {
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 3px;
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
         }
 
         .preset-chip {
-            flex-shrink: 0;
             background: rgba(15, 23, 42, 0.6);
             border: 1px solid rgba(255, 255, 255, 0.1);
             color: #D1D5DB;
-            padding: 11px 20px;
-            border-radius: 24px;
+            padding: 12px 16px;
+            border-radius: 10px;
             font-family: 'Inter', sans-serif;
-            font-size: 15px;
+            font-size: 14px;
             font-weight: 500;
             cursor: pointer;
             transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-            white-space: nowrap;
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
         }
 
         .preset-chip:hover {
@@ -583,17 +570,17 @@
             </div>
         </div>
 
-        <!-- Preset Carousel -->
+        <!-- Preset Grid -->
         <div class="preset-carousel">
             <div class="section-header">Presets</div>
-            <div class="preset-scroll">
-                <div class="preset-chip" data-preset="rotation">🔄 Rotation</div>
-                <div class="preset-chip" data-preset="scaling">⤢ Scaling</div>
-                <div class="preset-chip" data-preset="shearX">⇉ Shear X</div>
-                <div class="preset-chip" data-preset="shearY">⇊ Shear Y</div>
-                <div class="preset-chip" data-preset="reflection">↔ Reflection</div>
-                <div class="preset-chip" data-preset="projection">⊡ Projection</div>
-                <div class="preset-chip" data-preset="squeeze">⇔ Squeeze</div>
+            <div class="preset-grid">
+                <div class="preset-chip" data-preset="rotation"><span>🔄</span><span>Rotation</span></div>
+                <div class="preset-chip" data-preset="scaling"><span>⤢</span><span>Scaling</span></div>
+                <div class="preset-chip" data-preset="shearX"><span>⇉</span><span>Shear X</span></div>
+                <div class="preset-chip" data-preset="shearY"><span>⇊</span><span>Shear Y</span></div>
+                <div class="preset-chip" data-preset="reflection"><span>↔</span><span>Reflection</span></div>
+                <div class="preset-chip" data-preset="projection"><span>⊡</span><span>Projection</span></div>
+                <div class="preset-chip" data-preset="squeeze"><span>⇔</span><span>Squeeze</span></div>
             </div>
         </div>
 
