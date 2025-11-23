@@ -1230,11 +1230,11 @@ class EigenvectorApp {
     drawDeterminantInfoCard() {
         const det = this.currentMatrix.determinant();
 
-        // Position card in bottom-left area (to avoid legend on bottom-right)
+        // Position card in bottom-center area (to avoid both left and right panels)
         const width = 280;
         const height = 140;
-        const x = 40; // Left side with margin
-        const y = this.height - height - 120; // Above timeline control
+        const x = (this.width - width) / 2; // Centered horizontally
+        const y = this.height - height - 180; // Above timeline control with more clearance
 
         // Glassmorphism card background
         this.ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
