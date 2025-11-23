@@ -884,8 +884,11 @@ class EigenvectorApp {
     calculateRequiredScale() {
         let maxDistance = 0;
 
+        // Use targetMatrix instead of currentMatrix for stable zoom (prevents jitter during animation)
+        const matrix = this.targetMatrix;
+
         // Check eigenvectors (they're displayed at 3× scale)
-        const eigenvectors = this.targetMatrix.getEigenvectors();
+        const eigenvectors = matrix.getEigenvectors();
         if (eigenvectors) {
             const scale = 3;
             const eigenVecs = [
@@ -896,7 +899,7 @@ class EigenvectorApp {
             ];
 
             eigenVecs.forEach(vec => {
-                const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                const transformed = matrix.transform(vec.x, vec.y);
                 const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
                 maxDistance = Math.max(maxDistance, distance);
             });
@@ -904,14 +907,14 @@ class EigenvectorApp {
 
         // Check test vectors
         this.testVectors.forEach(vec => {
-            const transformed = this.currentMatrix.transform(vec.x, vec.y);
+            const transformed = matrix.transform(vec.x, vec.y);
             const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
             maxDistance = Math.max(maxDistance, distance);
         });
 
         // Check custom vectors
         this.customVectors.forEach(vec => {
-            const transformed = this.currentMatrix.transform(vec.x, vec.y);
+            const transformed = matrix.transform(vec.x, vec.y);
             const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
             maxDistance = Math.max(maxDistance, distance);
         });
@@ -933,8 +936,8 @@ class EigenvectorApp {
     draw() {
         // Auto-zoom: adjust scale to keep all vectors visible
         const targetScale = this.calculateRequiredScale();
-        // Smooth interpolation for gradual zoom (0.15 = smooth but responsive)
-        this.scale = this.scale * 0.85 + targetScale * 0.15;
+        // Smooth interpolation for gradual zoom (0.08 = very smooth, reduces jitter)
+        this.scale = this.scale * 0.92 + targetScale * 0.08;
 
         this.ctx.clearRect(0, 0, this.width, this.height);
 
