@@ -672,8 +672,67 @@ class EigenvectorApp {
 
     drawTestVectors() {
         this.testVectors.forEach(vec => {
-            this.drawVector(vec.x, vec.y, '#F59E0B', 2);
+            // Draw original (untransformed) vector in faded gray
+            this.drawOriginalVector(vec.x, vec.y);
+
+            // Draw transformed vector in bright yellow with glow
+            this.drawVector(vec.x, vec.y, '#FCD34D', 4);
+
+            // Draw endpoint dot for transformed vector
+            this.drawVectorDot(vec.x, vec.y);
         });
+    }
+
+    drawOriginalVector(x, y) {
+        // Draw the untransformed vector (identity transformation)
+        const start = this.toScreenCoords(0, 0);
+        const end = this.toScreenCoords(x, y);
+
+        // Faded gray with low opacity
+        this.ctx.strokeStyle = 'rgba(156, 163, 175, 0.3)';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([4, 4]); // Dashed line
+        this.ctx.lineCap = 'round';
+
+        this.ctx.beginPath();
+        this.ctx.moveTo(start.x, start.y);
+        this.ctx.lineTo(end.x, end.y);
+        this.ctx.stroke();
+
+        // Reset line dash
+        this.ctx.setLineDash([]);
+
+        // Small arrowhead for original vector
+        const angle = Math.atan2(end.y - start.y, end.x - start.x);
+        const headLength = 8;
+
+        this.ctx.fillStyle = 'rgba(156, 163, 175, 0.3)';
+        this.ctx.beginPath();
+        this.ctx.moveTo(end.x, end.y);
+        this.ctx.lineTo(
+            end.x - headLength * Math.cos(angle - Math.PI / 6),
+            end.y - headLength * Math.sin(angle - Math.PI / 6)
+        );
+        this.ctx.lineTo(
+            end.x - headLength * Math.cos(angle + Math.PI / 6),
+            end.y - headLength * Math.sin(angle + Math.PI / 6)
+        );
+        this.ctx.closePath();
+        this.ctx.fill();
+    }
+
+    drawVectorDot(x, y) {
+        // Draw a bright dot at the transformed vector endpoint
+        const transformed = this.currentMatrix.transform(x, y);
+        const end = this.toScreenCoords(transformed.x, transformed.y);
+
+        this.ctx.fillStyle = '#FCD34D';
+        this.ctx.shadowBlur = 10;
+        this.ctx.shadowColor = '#FCD34D';
+        this.ctx.beginPath();
+        this.ctx.arc(end.x, end.y, 5, 0, Math.PI * 2);
+        this.ctx.fill();
+        this.ctx.shadowBlur = 0;
     }
 }
 
