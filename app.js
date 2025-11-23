@@ -552,6 +552,22 @@ class EigenvectorApp {
                 this.draw();
             }
         });
+
+        // Mouse wheel - manual zoom control
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            // Zoom factor: negative deltaY = zoom in, positive = zoom out
+            const zoomFactor = e.deltaY > 0 ? 0.9 : 1.1;
+            this.scale *= zoomFactor;
+
+            // Clamp scale to reasonable bounds
+            this.scale = Math.max(20, Math.min(200, this.scale));
+
+            if (!this.isAnimating) {
+                this.draw();
+            }
+        });
     }
 
     setProgress(progress) {
@@ -797,6 +813,33 @@ class EigenvectorApp {
         }
     }
 
+    randomizeMatrix() {
+        // Generate random matrix values between -3 and 3
+        const randomValue = () => (Math.random() * 6 - 3).toFixed(2);
+
+        const matrix = new Matrix2D(
+            parseFloat(randomValue()),
+            parseFloat(randomValue()),
+            parseFloat(randomValue()),
+            parseFloat(randomValue())
+        );
+
+        // Clear any active preset selection
+        document.querySelectorAll('.preset-chip').forEach(chip => {
+            chip.classList.remove('active');
+        });
+
+        // Update matrix inputs and apply transformation
+        this.targetMatrix = matrix;
+        this.currentMatrix = matrix;
+        this.updateMatrixInputFields(matrix);
+        this.updateInfo();
+
+        if (!this.isAnimating) {
+            this.draw();
+        }
+    }
+
     reconstructMatrixFromEigenvectors(v1, lambda1, v2, lambda2) {
         // Build P matrix (eigenvectors as columns): P = [v1 v2]
         // P = [[v1.x, v2.x],
@@ -881,64 +924,7 @@ class EigenvectorApp {
         };
     }
 
-    calculateRequiredScale() {
-        let maxDistance = 0;
-
-        // Use targetMatrix instead of currentMatrix for stable zoom (prevents jitter during animation)
-        const matrix = this.targetMatrix;
-
-        // Check eigenvectors (they're displayed at 3× scale)
-        const eigenvectors = matrix.getEigenvectors();
-        if (eigenvectors) {
-            const scale = 3;
-            const eigenVecs = [
-                { x: eigenvectors.v1.x * scale, y: eigenvectors.v1.y * scale },
-                { x: -eigenvectors.v1.x * scale, y: -eigenvectors.v1.y * scale },
-                { x: eigenvectors.v2.x * scale, y: eigenvectors.v2.y * scale },
-                { x: -eigenvectors.v2.x * scale, y: -eigenvectors.v2.y * scale }
-            ];
-
-            eigenVecs.forEach(vec => {
-                const transformed = matrix.transform(vec.x, vec.y);
-                const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
-                maxDistance = Math.max(maxDistance, distance);
-            });
-        }
-
-        // Check test vectors
-        this.testVectors.forEach(vec => {
-            const transformed = matrix.transform(vec.x, vec.y);
-            const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
-            maxDistance = Math.max(maxDistance, distance);
-        });
-
-        // Check custom vectors
-        this.customVectors.forEach(vec => {
-            const transformed = matrix.transform(vec.x, vec.y);
-            const distance = Math.sqrt(transformed.x * transformed.x + transformed.y * transformed.y);
-            maxDistance = Math.max(maxDistance, distance);
-        });
-
-        // If no vectors or all at origin, use default
-        if (maxDistance < 1) {
-            maxDistance = 5; // Default view size
-        }
-
-        // Calculate scale to fit with margin
-        const margin = 1.4; // 40% padding around edges
-        const minDimension = Math.min(this.width, this.height);
-        const targetScale = (minDimension / 2) / (maxDistance * margin);
-
-        // Clamp scale to reasonable bounds
-        return Math.max(20, Math.min(120, targetScale));
-    }
-
     draw() {
-        // Auto-zoom: adjust scale to keep all vectors visible
-        const targetScale = this.calculateRequiredScale();
-        // Smooth interpolation for gradual zoom (0.08 = very smooth, reduces jitter)
-        this.scale = this.scale * 0.92 + targetScale * 0.08;
-
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         const isDimmed = this.hoveredEigenvectorIndex >= 0;
