@@ -177,6 +177,7 @@ class EigenvectorApp {
         // Hover state
         this.mousePos = null;
         this.hoveredVectorIndex = -1;
+        this.hoveredEigenvectorIndex = -1; // -1: none, 0: v1, 1: v2
         this.hoverRadius = 15; // pixels radius for hover detection
 
         this.setupInputListeners();
@@ -260,21 +261,50 @@ class EigenvectorApp {
                 y: e.clientY - rect.top
             };
 
-            // Check if hovering over any test vector endpoint
+            // Reset hover states
             this.hoveredVectorIndex = -1;
+            this.hoveredEigenvectorIndex = -1;
 
-            this.testVectors.forEach((vec, idx) => {
-                const transformed = this.currentMatrix.transform(vec.x, vec.y);
-                const end = this.toScreenCoords(transformed.x, transformed.y);
+            // Check if hovering over any eigenvector endpoint
+            const eigenvectors = this.targetMatrix.getEigenvectors();
+            if (eigenvectors) {
+                const scale = 3;
+                const eigenVecs = [
+                    { x: eigenvectors.v1.x * scale, y: eigenvectors.v1.y * scale, idx: 0 },
+                    { x: -eigenvectors.v1.x * scale, y: -eigenvectors.v1.y * scale, idx: 0 },
+                    { x: eigenvectors.v2.x * scale, y: eigenvectors.v2.y * scale, idx: 1 },
+                    { x: -eigenvectors.v2.x * scale, y: -eigenvectors.v2.y * scale, idx: 1 }
+                ];
 
-                const dx = this.mousePos.x - end.x;
-                const dy = this.mousePos.y - end.y;
-                const distance = Math.sqrt(dx * dx + dy * dy);
+                eigenVecs.forEach(vec => {
+                    const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                    const end = this.toScreenCoords(transformed.x, transformed.y);
 
-                if (distance <= this.hoverRadius) {
-                    this.hoveredVectorIndex = idx;
-                }
-            });
+                    const dx = this.mousePos.x - end.x;
+                    const dy = this.mousePos.y - end.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance <= this.hoverRadius * 1.5) { // Slightly larger radius for eigenvectors
+                        this.hoveredEigenvectorIndex = vec.idx;
+                    }
+                });
+            }
+
+            // Check if hovering over any test vector endpoint (only if not hovering eigenvector)
+            if (this.hoveredEigenvectorIndex === -1) {
+                this.testVectors.forEach((vec, idx) => {
+                    const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                    const end = this.toScreenCoords(transformed.x, transformed.y);
+
+                    const dx = this.mousePos.x - end.x;
+                    const dy = this.mousePos.y - end.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+
+                    if (distance <= this.hoverRadius) {
+                        this.hoveredVectorIndex = idx;
+                    }
+                });
+            }
 
             if (!this.isAnimating) {
                 this.draw();
@@ -284,6 +314,7 @@ class EigenvectorApp {
         this.canvas.addEventListener('mouseleave', () => {
             this.mousePos = null;
             this.hoveredVectorIndex = -1;
+            this.hoveredEigenvectorIndex = -1;
             if (!this.isAnimating) {
                 this.draw();
             }
@@ -291,7 +322,8 @@ class EigenvectorApp {
 
         // Change cursor when hovering
         this.canvas.addEventListener('mousemove', () => {
-            this.canvas.style.cursor = this.hoveredVectorIndex >= 0 ? 'pointer' : 'default';
+            const isHovering = this.hoveredVectorIndex >= 0 || this.hoveredEigenvectorIndex >= 0;
+            this.canvas.style.cursor = isHovering ? 'pointer' : 'default';
         });
     }
 
@@ -531,11 +563,19 @@ class EigenvectorApp {
     draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
+        const isDimmed = this.hoveredEigenvectorIndex >= 0;
+
         this.drawGrid();
         this.drawAxes();
-        this.drawGhostTrails();
-        this.drawEigenvectors();
-        this.drawTestVectors();
+        this.drawGhostTrails(isDimmed);
+        this.drawTestVectors(isDimmed);
+        this.drawEigenvectors(isDimmed);
+
+        // Draw eigenline and info card on top if hovering
+        if (this.hoveredEigenvectorIndex >= 0) {
+            this.drawEigenline();
+            this.drawEigenInfoCard();
+        }
     }
 
     drawGrid() {
@@ -595,8 +635,9 @@ class EigenvectorApp {
         this.ctx.stroke();
     }
 
-    drawGhostTrails() {
+    drawGhostTrails(isDimmed = false) {
         const colors = ['#06B6D4', '#EC4899'];
+        const opacity = isDimmed ? 0.2 : 1;
 
         this.eigenTrails.forEach((trail, idx) => {
             if (trail.length < 2) return;
@@ -619,7 +660,7 @@ class EigenvectorApp {
                     return `rgba(${r}, ${g}, ${b}, ${alpha})`;
                 };
 
-                this.ctx.strokeStyle = hexToRgba(colors[idx], alpha);
+                this.ctx.strokeStyle = hexToRgba(colors[idx], alpha * opacity);
                 this.ctx.lineWidth = 4;
                 this.ctx.lineCap = 'round';
                 this.ctx.lineJoin = 'round';
@@ -640,15 +681,25 @@ class EigenvectorApp {
         });
     }
 
-    drawVector(x, y, color, lineWidth = 3, label = '') {
+    drawVector(x, y, color, lineWidth = 3, label = '', opacity = 1) {
         const transformed = this.currentMatrix.transform(x, y);
         const start = this.toScreenCoords(0, 0);
         const end = this.toScreenCoords(transformed.x, transformed.y);
 
+        // Convert hex to rgba
+        const hexToRgba = (hex, alpha) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        const colorWithOpacity = hexToRgba(color, opacity);
+
         // Draw line with glow
-        this.ctx.shadowBlur = 15;
-        this.ctx.shadowColor = color;
-        this.ctx.strokeStyle = color;
+        this.ctx.shadowBlur = 15 * opacity;
+        this.ctx.shadowColor = colorWithOpacity;
+        this.ctx.strokeStyle = colorWithOpacity;
         this.ctx.lineWidth = lineWidth;
         this.ctx.beginPath();
         this.ctx.moveTo(start.x, start.y);
@@ -660,7 +711,7 @@ class EigenvectorApp {
         const angle = Math.atan2(end.y - start.y, end.x - start.x);
         const headLength = 15;
 
-        this.ctx.fillStyle = color;
+        this.ctx.fillStyle = colorWithOpacity;
         this.ctx.beginPath();
         this.ctx.moveTo(end.x, end.y);
         this.ctx.lineTo(
@@ -675,18 +726,25 @@ class EigenvectorApp {
         this.ctx.fill();
 
         // Draw label
-        if (label) {
-            this.ctx.fillStyle = color;
+        if (label && opacity > 0.3) {
+            this.ctx.fillStyle = colorWithOpacity;
             this.ctx.font = 'bold 13px "JetBrains Mono", monospace';
             this.ctx.fillText(label, end.x + 15, end.y - 10);
         }
     }
 
-    drawEigenvectors() {
+    drawEigenvectors(isDimmed = false) {
         const eigenvectors = this.targetMatrix.getEigenvectors();
         if (!eigenvectors) return;
 
         const scale = 3;
+
+        // Determine opacity based on hover state
+        let opacity1 = 1, opacity2 = 1;
+        if (isDimmed) {
+            opacity1 = this.hoveredEigenvectorIndex === 0 ? 1 : 0.15;
+            opacity2 = this.hoveredEigenvectorIndex === 1 ? 1 : 0.15;
+        }
 
         // Draw eigenvector 1 (both directions)
         this.drawVector(
@@ -694,13 +752,16 @@ class EigenvectorApp {
             eigenvectors.v1.y * scale,
             '#06B6D4',
             5,
-            `λ₁=${eigenvectors.lambda1.toFixed(2)}`
+            `λ₁=${eigenvectors.lambda1.toFixed(2)}`,
+            opacity1
         );
         this.drawVector(
             -eigenvectors.v1.x * scale,
             -eigenvectors.v1.y * scale,
             '#06B6D4',
-            5
+            5,
+            '',
+            opacity1
         );
 
         // Draw eigenvector 2 (both directions)
@@ -709,41 +770,45 @@ class EigenvectorApp {
             eigenvectors.v2.y * scale,
             '#EC4899',
             5,
-            `λ₂=${eigenvectors.lambda2.toFixed(2)}`
+            `λ₂=${eigenvectors.lambda2.toFixed(2)}`,
+            opacity2
         );
         this.drawVector(
             -eigenvectors.v2.x * scale,
             -eigenvectors.v2.y * scale,
             '#EC4899',
-            5
+            5,
+            '',
+            opacity2
         );
     }
 
-    drawTestVectors() {
+    drawTestVectors(isDimmed = false) {
+        const opacity = isDimmed ? 0.15 : 1;
         this.testVectors.forEach((vec, idx) => {
             // Draw original (untransformed) vector in faded gray
-            this.drawOriginalVector(vec.x, vec.y);
+            this.drawOriginalVector(vec.x, vec.y, opacity);
 
             // Draw transformed vector in bright yellow with glow
-            this.drawVector(vec.x, vec.y, '#FCD34D', 4);
+            this.drawVector(vec.x, vec.y, '#FCD34D', 4, '', opacity);
 
             // Draw endpoint dot for transformed vector
-            this.drawVectorDot(vec.x, vec.y);
+            this.drawVectorDot(vec.x, vec.y, opacity);
 
             // Draw arc if this vector is being hovered
-            if (idx === this.hoveredVectorIndex) {
+            if (idx === this.hoveredVectorIndex && !isDimmed) {
                 this.drawRotationArc(vec.x, vec.y);
             }
         });
     }
 
-    drawOriginalVector(x, y) {
+    drawOriginalVector(x, y, opacity = 1) {
         // Draw the untransformed vector (identity transformation)
         const start = this.toScreenCoords(0, 0);
         const end = this.toScreenCoords(x, y);
 
-        // Faded gray with low opacity
-        this.ctx.strokeStyle = 'rgba(156, 163, 175, 0.3)';
+        // Faded gray with opacity
+        this.ctx.strokeStyle = `rgba(156, 163, 175, ${0.3 * opacity})`;
         this.ctx.lineWidth = 2;
         this.ctx.setLineDash([4, 4]); // Dashed line
         this.ctx.lineCap = 'round';
@@ -760,7 +825,7 @@ class EigenvectorApp {
         const angle = Math.atan2(end.y - start.y, end.x - start.x);
         const headLength = 8;
 
-        this.ctx.fillStyle = 'rgba(156, 163, 175, 0.3)';
+        this.ctx.fillStyle = `rgba(156, 163, 175, ${0.3 * opacity})`;
         this.ctx.beginPath();
         this.ctx.moveTo(end.x, end.y);
         this.ctx.lineTo(
@@ -775,14 +840,21 @@ class EigenvectorApp {
         this.ctx.fill();
     }
 
-    drawVectorDot(x, y) {
+    drawVectorDot(x, y, opacity = 1) {
         // Draw a bright dot at the transformed vector endpoint
         const transformed = this.currentMatrix.transform(x, y);
         const end = this.toScreenCoords(transformed.x, transformed.y);
 
-        this.ctx.fillStyle = '#FCD34D';
-        this.ctx.shadowBlur = 10;
-        this.ctx.shadowColor = '#FCD34D';
+        const hexToRgba = (hex, alpha) => {
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        this.ctx.fillStyle = hexToRgba('#FCD34D', opacity);
+        this.ctx.shadowBlur = 10 * opacity;
+        this.ctx.shadowColor = hexToRgba('#FCD34D', opacity);
         this.ctx.beginPath();
         this.ctx.arc(end.x, end.y, 5, 0, Math.PI * 2);
         this.ctx.fill();
@@ -873,6 +945,114 @@ class EigenvectorApp {
         this.ctx.lineTo(originalEnd.x, originalEnd.y);
         this.ctx.stroke();
         this.ctx.setLineDash([]);
+    }
+
+    drawEigenline() {
+        const eigenvectors = this.targetMatrix.getEigenvectors();
+        if (!eigenvectors) return;
+
+        const eigenVec = this.hoveredEigenvectorIndex === 0 ? eigenvectors.v1 : eigenvectors.v2;
+        const color = this.hoveredEigenvectorIndex === 0 ? '#06B6D4' : '#EC4899';
+
+        // Draw infinite line through origin in both directions
+        const maxDist = Math.max(this.width, this.height) / this.scale * 2;
+
+        const point1 = this.currentMatrix.transform(eigenVec.x * maxDist, eigenVec.y * maxDist);
+        const point2 = this.currentMatrix.transform(-eigenVec.x * maxDist, -eigenVec.y * maxDist);
+
+        const screen1 = this.toScreenCoords(point1.x, point1.y);
+        const screen2 = this.toScreenCoords(point2.x, point2.y);
+
+        // Draw the full eigenline
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.globalAlpha = 0.3;
+        this.ctx.setLineDash([8, 8]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(screen1.x, screen1.y);
+        this.ctx.lineTo(screen2.x, screen2.y);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        this.ctx.globalAlpha = 1;
+    }
+
+    drawEigenInfoCard() {
+        const eigenvectors = this.targetMatrix.getEigenvectors();
+        if (!eigenvectors) return;
+
+        const idx = this.hoveredEigenvectorIndex;
+        const eigenVec = idx === 0 ? eigenvectors.v1 : eigenvectors.v2;
+        const eigenVal = idx === 0 ? eigenvectors.lambda1 : eigenvectors.lambda2;
+        const color = idx === 0 ? '#06B6D4' : '#EC4899';
+        const spaceNum = idx + 1;
+
+        // Position card in top-left corner
+        const x = 40;
+        const y = 40;
+        const width = 320;
+        const height = 160;
+
+        // Draw card background
+        this.ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+        this.ctx.strokeStyle = color;
+        this.ctx.lineWidth = 2;
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowColor = color;
+        this.ctx.fillRect(x, y, width, height);
+        this.ctx.strokeRect(x, y, width, height);
+        this.ctx.shadowBlur = 0;
+
+        // Draw content
+        const padding = 20;
+        let currentY = y + padding + 20;
+
+        // Title
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 18px "Inter", sans-serif';
+        this.ctx.fillText(`EIGENSPACE ${spaceNum}`, x + padding, currentY);
+
+        currentY += 30;
+
+        // Direction
+        this.ctx.fillStyle = '#E5E7EB';
+        this.ctx.font = '14px "Inter", sans-serif';
+        this.ctx.fillText('Direction:', x + padding, currentY);
+        this.ctx.fillStyle = color;
+        this.ctx.font = '14px "JetBrains Mono", monospace';
+        this.ctx.fillText(`(${eigenVec.x.toFixed(3)}, ${eigenVec.y.toFixed(3)})`, x + padding + 80, currentY);
+
+        currentY += 28;
+
+        // Eigenvalue
+        this.ctx.fillStyle = '#E5E7EB';
+        this.ctx.font = '14px "Inter", sans-serif';
+        this.ctx.fillText('Eigenvalue:', x + padding, currentY);
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 16px "JetBrains Mono", monospace';
+        this.ctx.fillText(`λ${spaceNum} = ${eigenVal.toFixed(3)}`, x + padding + 95, currentY);
+
+        currentY += 28;
+
+        // Scaling description
+        const scaleFactor = Math.abs(eigenVal);
+        const scaleDesc = eigenVal < 0
+            ? `${scaleFactor.toFixed(1)}× (reversed)`
+            : `${scaleFactor.toFixed(1)}×`;
+
+        this.ctx.fillStyle = '#E5E7EB';
+        this.ctx.font = '14px "Inter", sans-serif';
+        this.ctx.fillText('Scaling:', x + padding, currentY);
+        this.ctx.fillStyle = color;
+        this.ctx.font = 'bold 14px "JetBrains Mono", monospace';
+        this.ctx.fillText(scaleDesc, x + padding + 70, currentY);
+
+        currentY += 28;
+
+        // Note
+        this.ctx.fillStyle = '#9CA3AF';
+        this.ctx.font = 'italic 12px "Inter", sans-serif';
+        this.ctx.fillText('Both arrows = same eigenspace', x + padding, currentY);
+        this.ctx.fillText('Vectors scale along this line', x + padding, currentY + 16);
     }
 }
 
