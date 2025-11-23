@@ -180,6 +180,13 @@ class EigenvectorApp {
         this.hoveredEigenvectorIndex = -1; // -1: none, 0: v1, 1: v2
         this.hoverRadius = 15; // pixels radius for hover detection
 
+        // Custom vectors (user-drawn)
+        this.customVectors = [];
+        this.isDraggingNewVector = false;
+        this.isDraggingExistingVector = false;
+        this.dragStartPos = null;
+        this.draggedVectorIndex = -1;
+
         this.setupInputListeners();
         this.setupScrubber();
         this.setupPresetChips();
@@ -261,6 +268,24 @@ class EigenvectorApp {
                 y: e.clientY - rect.top
             };
 
+            // Handle dragging existing custom vector
+            if (this.isDraggingExistingVector && this.draggedVectorIndex >= 0) {
+                const mathCoords = this.toMathCoords(this.mousePos.x, this.mousePos.y);
+                this.customVectors[this.draggedVectorIndex] = { x: mathCoords.x, y: mathCoords.y };
+                if (!this.isAnimating) {
+                    this.draw();
+                }
+                return;
+            }
+
+            // Draw preview while dragging new vector
+            if (this.isDraggingNewVector) {
+                if (!this.isAnimating) {
+                    this.draw();
+                }
+                return;
+            }
+
             // Reset hover states
             this.hoveredVectorIndex = -1;
             this.hoveredEigenvectorIndex = -1;
@@ -320,10 +345,117 @@ class EigenvectorApp {
             }
         });
 
-        // Change cursor when hovering
+        // Change cursor based on state
         this.canvas.addEventListener('mousemove', () => {
-            const isHovering = this.hoveredVectorIndex >= 0 || this.hoveredEigenvectorIndex >= 0;
-            this.canvas.style.cursor = isHovering ? 'pointer' : 'default';
+            // Check if hovering over delete button
+            let hoveringDelete = false;
+            this.customVectors.forEach((vec) => {
+                const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                const end = this.toScreenCoords(transformed.x, transformed.y);
+                const btnX = end.x + 20;
+                const btnY = end.y - 20;
+                const btnRadius = 8;
+
+                if (this.mousePos) {
+                    const dx = this.mousePos.x - btnX;
+                    const dy = this.mousePos.y - btnY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    if (distance <= btnRadius) {
+                        hoveringDelete = true;
+                    }
+                }
+            });
+
+            if (hoveringDelete) {
+                this.canvas.style.cursor = 'pointer';
+            } else if (this.isDraggingNewVector) {
+                this.canvas.style.cursor = 'crosshair';
+            } else if (this.isDraggingExistingVector) {
+                this.canvas.style.cursor = 'move';
+            } else if (this.hoveredVectorIndex >= 0 || this.hoveredEigenvectorIndex >= 0) {
+                this.canvas.style.cursor = 'pointer';
+            } else {
+                this.canvas.style.cursor = 'crosshair'; // Default to crosshair for drawing
+            }
+        });
+
+        // Mouse down - start drawing or dragging
+        this.canvas.addEventListener('mousedown', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            const screenX = e.clientX - rect.left;
+            const screenY = e.clientY - rect.top;
+            const mathCoords = this.toMathCoords(screenX, screenY);
+
+            // Check if clicking on delete button
+            let clickedDelete = false;
+            this.customVectors.forEach((vec, idx) => {
+                const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                const end = this.toScreenCoords(transformed.x, transformed.y);
+                const btnX = end.x + 20;
+                const btnY = end.y - 20;
+                const btnRadius = 8;
+
+                const dx = screenX - btnX;
+                const dy = screenY - btnY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= btnRadius) {
+                    this.customVectors.splice(idx, 1);
+                    clickedDelete = true;
+                    if (!this.isAnimating) {
+                        this.draw();
+                    }
+                }
+            });
+
+            if (clickedDelete) return;
+
+            // Check if clicking on existing custom vector endpoint
+            let clickedExisting = false;
+            this.customVectors.forEach((vec, idx) => {
+                const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                const end = this.toScreenCoords(transformed.x, transformed.y);
+
+                const dx = screenX - end.x;
+                const dy = screenY - end.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= this.hoverRadius) {
+                    this.isDraggingExistingVector = true;
+                    this.draggedVectorIndex = idx;
+                    clickedExisting = true;
+                }
+            });
+
+            // If not clicking existing, start drawing new vector
+            if (!clickedExisting) {
+                this.isDraggingNewVector = true;
+                this.dragStartPos = mathCoords;
+            }
+        });
+
+        // Mouse up - finalize vector
+        this.canvas.addEventListener('mouseup', (e) => {
+            if (this.isDraggingNewVector && this.mousePos) {
+                const mathCoords = this.toMathCoords(this.mousePos.x, this.mousePos.y);
+                const dx = mathCoords.x - this.dragStartPos.x;
+                const dy = mathCoords.y - this.dragStartPos.y;
+
+                // Only add if vector has some magnitude (at least 0.2 units)
+                const magnitude = Math.sqrt(dx * dx + dy * dy);
+                if (magnitude > 0.2) {
+                    this.customVectors.push({ x: dx, y: dy });
+                }
+            }
+
+            this.isDraggingNewVector = false;
+            this.isDraggingExistingVector = false;
+            this.dragStartPos = null;
+            this.draggedVectorIndex = -1;
+
+            if (!this.isAnimating) {
+                this.draw();
+            }
         });
     }
 
@@ -342,6 +474,10 @@ class EigenvectorApp {
         const d = parseFloat(document.getElementById('a22').value) || 0;
 
         this.targetMatrix = new Matrix2D(a, b, c, d);
+
+        // Clear custom vectors when matrix values change
+        this.customVectors = [];
+
         this.updateInfo();
 
         if (!this.isAnimating) {
@@ -429,6 +565,9 @@ class EigenvectorApp {
             <div class="desc-title">${preset.name}</div>
             <div>${preset.description}</div>
         `;
+
+        // Clear custom vectors when loading a new preset
+        this.customVectors = [];
 
         this.updateInfo();
         this.reset();
@@ -541,6 +680,13 @@ class EigenvectorApp {
         });
     }
 
+    clearCustomVectors() {
+        this.customVectors = [];
+        if (!this.isAnimating) {
+            this.draw();
+        }
+    }
+
     updateProgressUI() {
         const progress = document.getElementById('scrubberProgress');
         const handle = document.getElementById('scrubberHandle');
@@ -560,21 +706,40 @@ class EigenvectorApp {
         };
     }
 
+    toMathCoords(screenX, screenY) {
+        return {
+            x: (screenX - this.origin.x) / this.scale,
+            y: (this.origin.y - screenY) / this.scale
+        };
+    }
+
     draw() {
         this.ctx.clearRect(0, 0, this.width, this.height);
 
         const isDimmed = this.hoveredEigenvectorIndex >= 0;
 
+        // Layer 1: Background elements
         this.drawGrid();
         this.drawAxes();
         this.drawGhostTrails(isDimmed);
-        this.drawTestVectors(isDimmed);
+
+        // Layer 2: Eigenvectors (draw first so their labels are visible)
         this.drawEigenvectors(isDimmed);
 
-        // Draw eigenline and info card on top if hovering
+        // Layer 3: Test vectors and custom vectors (draw after eigenvectors)
+        this.drawTestVectors(isDimmed);
+        this.drawCustomVectors(isDimmed);
+
+        // Layer 4: Hover effects on top
         if (this.hoveredEigenvectorIndex >= 0) {
             this.drawEigenline();
             this.drawEigenInfoCard();
+        }
+
+        // Layer 5: Test vector hover arc (draw last so it's on top)
+        if (this.hoveredVectorIndex >= 0 && !isDimmed) {
+            const vec = this.testVectors[this.hoveredVectorIndex];
+            this.drawRotationArc(vec.x, vec.y);
         }
     }
 
@@ -794,11 +959,6 @@ class EigenvectorApp {
 
             // Draw endpoint dot for transformed vector
             this.drawVectorDot(vec.x, vec.y, opacity);
-
-            // Draw arc if this vector is being hovered
-            if (idx === this.hoveredVectorIndex && !isDimmed) {
-                this.drawRotationArc(vec.x, vec.y);
-            }
         });
     }
 
@@ -859,6 +1019,125 @@ class EigenvectorApp {
         this.ctx.arc(end.x, end.y, 5, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.shadowBlur = 0;
+    }
+
+    drawCustomVectors(isDimmed = false) {
+        const opacity = isDimmed ? 0.15 : 1;
+
+        // Draw finalized custom vectors
+        this.customVectors.forEach((vec, idx) => {
+            // Draw original (untransformed) vector in faded gray
+            this.drawOriginalVector(vec.x, vec.y, opacity);
+
+            // Draw transformed vector in bright yellow (same as test vectors)
+            this.drawVector(vec.x, vec.y, '#FCD34D', 4, '', opacity);
+
+            // Draw endpoint dot for transformed vector
+            this.drawVectorDot(vec.x, vec.y, opacity);
+
+            // Draw delete button (small X) near the endpoint
+            this.drawDeleteButton(vec.x, vec.y, idx, opacity);
+        });
+
+        // Draw preview of new vector being dragged
+        if (this.isDraggingNewVector && this.dragStartPos && this.mousePos) {
+            const mathCoords = this.toMathCoords(this.mousePos.x, this.mousePos.y);
+            const dx = mathCoords.x - this.dragStartPos.x;
+            const dy = mathCoords.y - this.dragStartPos.y;
+
+            // Draw preview in semi-transparent yellow
+            const start = this.toScreenCoords(this.dragStartPos.x, this.dragStartPos.y);
+            const end = this.toScreenCoords(mathCoords.x, mathCoords.y);
+
+            this.ctx.strokeStyle = 'rgba(252, 211, 77, 0.5)';
+            this.ctx.lineWidth = 4;
+            this.ctx.lineCap = 'round';
+            this.ctx.setLineDash([5, 5]);
+
+            this.ctx.beginPath();
+            this.ctx.moveTo(start.x, start.y);
+            this.ctx.lineTo(end.x, end.y);
+            this.ctx.stroke();
+
+            this.ctx.setLineDash([]);
+
+            // Draw preview arrowhead
+            const angle = Math.atan2(end.y - start.y, end.x - start.x);
+            const headLength = 12;
+
+            this.ctx.fillStyle = 'rgba(252, 211, 77, 0.5)';
+            this.ctx.beginPath();
+            this.ctx.moveTo(end.x, end.y);
+            this.ctx.lineTo(
+                end.x - headLength * Math.cos(angle - Math.PI / 6),
+                end.y - headLength * Math.sin(angle - Math.PI / 6)
+            );
+            this.ctx.lineTo(
+                end.x - headLength * Math.cos(angle + Math.PI / 6),
+                end.y - headLength * Math.sin(angle + Math.PI / 6)
+            );
+            this.ctx.closePath();
+            this.ctx.fill();
+
+            // Show coordinates tooltip
+            this.ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+            this.ctx.font = '12px "JetBrains Mono", monospace';
+            const tooltip = `(${dx.toFixed(2)}, ${dy.toFixed(2)})`;
+            const metrics = this.ctx.measureText(tooltip);
+            const padding = 6;
+
+            this.ctx.fillRect(
+                end.x + 15,
+                end.y - 25,
+                metrics.width + padding * 2,
+                20
+            );
+            this.ctx.fillStyle = '#FCD34D';
+            this.ctx.fillText(tooltip, end.x + 15 + padding, end.y - 10);
+        }
+    }
+
+    drawDeleteButton(x, y, idx, opacity = 1) {
+        const transformed = this.currentMatrix.transform(x, y);
+        const end = this.toScreenCoords(transformed.x, transformed.y);
+
+        // Position delete button near the endpoint
+        const btnX = end.x + 20;
+        const btnY = end.y - 20;
+        const btnRadius = 8;
+
+        // Check if mouse is hovering over delete button
+        let isHovering = false;
+        if (this.mousePos) {
+            const dx = this.mousePos.x - btnX;
+            const dy = this.mousePos.y - btnY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            isHovering = distance <= btnRadius;
+        }
+
+        // Draw circle background
+        this.ctx.fillStyle = isHovering ? `rgba(239, 68, 68, ${opacity})` : `rgba(100, 100, 100, ${0.6 * opacity})`;
+        this.ctx.beginPath();
+        this.ctx.arc(btnX, btnY, btnRadius, 0, Math.PI * 2);
+        this.ctx.fill();
+
+        // Draw X
+        this.ctx.strokeStyle = `rgba(255, 255, 255, ${opacity})`;
+        this.ctx.lineWidth = 2;
+        this.ctx.lineCap = 'round';
+
+        const xSize = 4;
+        this.ctx.beginPath();
+        this.ctx.moveTo(btnX - xSize, btnY - xSize);
+        this.ctx.lineTo(btnX + xSize, btnY + xSize);
+        this.ctx.moveTo(btnX + xSize, btnY - xSize);
+        this.ctx.lineTo(btnX - xSize, btnY + xSize);
+        this.ctx.stroke();
+
+        // Handle click on delete button
+        if (isHovering) {
+            this.canvas.style.cursor = 'pointer';
+        }
     }
 
     drawRotationArc(x, y) {

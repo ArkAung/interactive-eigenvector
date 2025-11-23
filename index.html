@@ -453,6 +453,30 @@
             border-color: rgba(248, 113, 113, 0.5);
         }
 
+        /* Clear Vectors Button */
+        .clear-vectors-btn {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #F87171;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .clear-vectors-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+
+        .clear-vectors-btn:active {
+            transform: scale(0.98);
+        }
+
         /* Speed Control */
         .speed-control {
             display: flex;
@@ -582,6 +606,13 @@
                 <div class="preset-chip" data-preset="projection"><span>⊡</span><span>Projection</span></div>
                 <div class="preset-chip" data-preset="squeeze"><span>⇔</span><span>Squeeze</span></div>
             </div>
+        </div>
+
+        <!-- Custom Vectors Control -->
+        <div class="custom-vectors-control" style="margin-bottom: 24px;">
+            <button class="clear-vectors-btn" id="clearVectorsBtn" onclick="app.clearCustomVectors()">
+                🗑️ Clear Custom Vectors
+            </button>
         </div>
 
         <!-- Transform Description -->
