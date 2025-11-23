@@ -490,6 +490,11 @@ class EigenvectorApp {
         // Clear custom vectors when matrix values change
         this.customVectors = [];
 
+        // Clear active preset selection when entering custom values
+        document.querySelectorAll('.preset-chip').forEach(chip => {
+            chip.classList.remove('active');
+        });
+
         this.updateInfo();
 
         if (!this.isAnimating) {
