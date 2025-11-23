@@ -174,9 +174,15 @@ class EigenvectorApp {
             { x: 1, y: -1 }
         ];
 
+        // Hover state
+        this.mousePos = null;
+        this.hoveredVectorIndex = -1;
+        this.hoverRadius = 15; // pixels radius for hover detection
+
         this.setupInputListeners();
         this.setupScrubber();
         this.setupPresetChips();
+        this.setupMouseTracking();
         this.updateMatrixFromInputs();
         this.draw();
     }
@@ -243,6 +249,49 @@ class EigenvectorApp {
                 chips.forEach(c => c.classList.remove('active'));
                 chip.classList.add('active');
             });
+        });
+    }
+
+    setupMouseTracking() {
+        this.canvas.addEventListener('mousemove', (e) => {
+            const rect = this.canvas.getBoundingClientRect();
+            this.mousePos = {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+
+            // Check if hovering over any test vector endpoint
+            this.hoveredVectorIndex = -1;
+
+            this.testVectors.forEach((vec, idx) => {
+                const transformed = this.currentMatrix.transform(vec.x, vec.y);
+                const end = this.toScreenCoords(transformed.x, transformed.y);
+
+                const dx = this.mousePos.x - end.x;
+                const dy = this.mousePos.y - end.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance <= this.hoverRadius) {
+                    this.hoveredVectorIndex = idx;
+                }
+            });
+
+            if (!this.isAnimating) {
+                this.draw();
+            }
+        });
+
+        this.canvas.addEventListener('mouseleave', () => {
+            this.mousePos = null;
+            this.hoveredVectorIndex = -1;
+            if (!this.isAnimating) {
+                this.draw();
+            }
+        });
+
+        // Change cursor when hovering
+        this.canvas.addEventListener('mousemove', () => {
+            this.canvas.style.cursor = this.hoveredVectorIndex >= 0 ? 'pointer' : 'default';
         });
     }
 
@@ -671,7 +720,7 @@ class EigenvectorApp {
     }
 
     drawTestVectors() {
-        this.testVectors.forEach(vec => {
+        this.testVectors.forEach((vec, idx) => {
             // Draw original (untransformed) vector in faded gray
             this.drawOriginalVector(vec.x, vec.y);
 
@@ -680,6 +729,11 @@ class EigenvectorApp {
 
             // Draw endpoint dot for transformed vector
             this.drawVectorDot(vec.x, vec.y);
+
+            // Draw arc if this vector is being hovered
+            if (idx === this.hoveredVectorIndex) {
+                this.drawRotationArc(vec.x, vec.y);
+            }
         });
     }
 
@@ -733,6 +787,92 @@ class EigenvectorApp {
         this.ctx.arc(end.x, end.y, 5, 0, Math.PI * 2);
         this.ctx.fill();
         this.ctx.shadowBlur = 0;
+    }
+
+    drawRotationArc(x, y) {
+        const origin = this.toScreenCoords(0, 0);
+        const originalEnd = this.toScreenCoords(x, y);
+        const transformed = this.currentMatrix.transform(x, y);
+        const transformedEnd = this.toScreenCoords(transformed.x, transformed.y);
+
+        // Calculate angles
+        const angle1 = Math.atan2(originalEnd.y - origin.y, originalEnd.x - origin.x);
+        const angle2 = Math.atan2(transformedEnd.y - origin.y, transformedEnd.x - origin.x);
+
+        // Calculate arc radius (use smaller of the two vector lengths, scaled down)
+        const originalLength = Math.sqrt(
+            (originalEnd.x - origin.x) ** 2 + (originalEnd.y - origin.y) ** 2
+        );
+        const transformedLength = Math.sqrt(
+            (transformedEnd.x - origin.x) ** 2 + (transformedEnd.y - origin.y) ** 2
+        );
+        const arcRadius = Math.min(originalLength, transformedLength) * 0.4;
+
+        // Draw arc
+        this.ctx.strokeStyle = '#FCD34D';
+        this.ctx.lineWidth = 2;
+        this.ctx.setLineDash([3, 3]);
+        this.ctx.beginPath();
+        this.ctx.arc(origin.x, origin.y, arcRadius, angle1, angle2, angle2 < angle1);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+
+        // Calculate angle difference in degrees
+        let angleDiff = ((angle2 - angle1) * 180 / Math.PI);
+        // Normalize to -180 to 180
+        while (angleDiff > 180) angleDiff -= 360;
+        while (angleDiff < -180) angleDiff += 360;
+
+        // Draw angle label
+        const labelAngle = (angle1 + angle2) / 2;
+        const labelRadius = arcRadius + 25;
+        const labelX = origin.x + labelRadius * Math.cos(labelAngle);
+        const labelY = origin.y + labelRadius * Math.sin(labelAngle);
+
+        // Background for label
+        this.ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        this.ctx.font = 'bold 14px "JetBrains Mono", monospace';
+        const labelText = `${Math.abs(angleDiff).toFixed(1)}°`;
+        const metrics = this.ctx.measureText(labelText);
+        const padding = 6;
+
+        this.ctx.fillRect(
+            labelX - metrics.width / 2 - padding,
+            labelY - 10 - padding,
+            metrics.width + padding * 2,
+            20 + padding * 2
+        );
+
+        // Draw label text
+        this.ctx.fillStyle = '#FCD34D';
+        this.ctx.textAlign = 'center';
+        this.ctx.textBaseline = 'middle';
+        this.ctx.fillText(labelText, labelX, labelY);
+
+        // Reset text alignment
+        this.ctx.textAlign = 'left';
+        this.ctx.textBaseline = 'alphabetic';
+
+        // Highlight the hovered vector
+        this.ctx.strokeStyle = '#FCD34D';
+        this.ctx.lineWidth = 6;
+        this.ctx.shadowBlur = 20;
+        this.ctx.shadowColor = '#FCD34D';
+        this.ctx.beginPath();
+        this.ctx.moveTo(origin.x, origin.y);
+        this.ctx.lineTo(transformedEnd.x, transformedEnd.y);
+        this.ctx.stroke();
+        this.ctx.shadowBlur = 0;
+
+        // Highlight the original vector too
+        this.ctx.strokeStyle = 'rgba(156, 163, 175, 0.6)';
+        this.ctx.lineWidth = 3;
+        this.ctx.setLineDash([4, 4]);
+        this.ctx.beginPath();
+        this.ctx.moveTo(origin.x, origin.y);
+        this.ctx.lineTo(originalEnd.x, originalEnd.y);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
     }
 }
 
