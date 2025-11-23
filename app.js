@@ -273,6 +273,17 @@ class EigenvectorApp {
     updateInfo() {
         const eigenvalues = this.targetMatrix.eigenvalues();
         const eigenCards = document.getElementById('eigenCards');
+        const charEquation = document.getElementById('charEquation');
+
+        // Display characteristic equation
+        const trace = this.targetMatrix.trace();
+        const det = this.targetMatrix.determinant();
+        charEquation.innerHTML = `
+            <div class="char-equation-label">Characteristic Equation</div>
+            <div class="char-equation">
+                λ² − ${trace.toFixed(3)}λ + ${det.toFixed(3)} = 0
+            </div>
+        `;
 
         if (eigenvalues.isComplex) {
             eigenCards.innerHTML = `
@@ -436,6 +447,19 @@ class EigenvectorApp {
         this.draw();
     }
 
+    setSpeed(speed) {
+        this.animationSpeed = speed;
+
+        // Update active state on speed buttons
+        document.querySelectorAll('.speed-btn').forEach(btn => {
+            if (parseFloat(btn.dataset.speed) === speed) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
+
     updateProgressUI() {
         const progress = document.getElementById('scrubberProgress');
         const handle = document.getElementById('scrubberHandle');
@@ -528,20 +552,41 @@ class EigenvectorApp {
         this.eigenTrails.forEach((trail, idx) => {
             if (trail.length < 2) return;
 
+            // Draw the trail with increasing opacity
             for (let i = 0; i < trail.length - 1; i++) {
-                const alpha = (i / trail.length) * 0.3;
+                const progress = i / (trail.length - 1);
+                const alpha = Math.pow(progress, 0.7) * 0.5; // Exponential fade for better visibility
                 const point = trail[i];
                 const nextPoint = trail[i + 1];
 
                 const start = this.toScreenCoords(point.x, point.y);
                 const end = this.toScreenCoords(nextPoint.x, nextPoint.y);
 
-                this.ctx.strokeStyle = colors[idx] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
-                this.ctx.lineWidth = 3;
+                // Convert hex to rgba for better transparency control
+                const hexToRgba = (hex, alpha) => {
+                    const r = parseInt(hex.slice(1, 3), 16);
+                    const g = parseInt(hex.slice(3, 5), 16);
+                    const b = parseInt(hex.slice(5, 7), 16);
+                    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                };
+
+                this.ctx.strokeStyle = hexToRgba(colors[idx], alpha);
+                this.ctx.lineWidth = 4;
+                this.ctx.lineCap = 'round';
+                this.ctx.lineJoin = 'round';
+
+                // Add subtle glow to trail
+                if (progress > 0.6) {
+                    this.ctx.shadowBlur = 8;
+                    this.ctx.shadowColor = colors[idx];
+                }
+
                 this.ctx.beginPath();
                 this.ctx.moveTo(start.x, start.y);
                 this.ctx.lineTo(end.x, end.y);
                 this.ctx.stroke();
+
+                this.ctx.shadowBlur = 0;
             }
         });
     }
