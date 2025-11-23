@@ -3,7 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Eigenvector Visualization</title>
+    <title>Eigenvector Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -12,285 +15,591 @@
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #1a1a2e;
-            color: #eee;
-            padding: 20px;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0B0F19;
+            color: #E5E7EB;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
         }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        h1 {
-            text-align: center;
-            margin-bottom: 10px;
-            color: #00d9ff;
-        }
-
-        .subtitle {
-            text-align: center;
-            margin-bottom: 30px;
-            color: #aaa;
-            font-size: 14px;
-        }
-
-        .main-content {
-            display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 20px;
-        }
-
-        .controls-panel {
-            background: #16213e;
-            padding: 20px;
-            border-radius: 10px;
-            height: fit-content;
-        }
-
+        /* Full Screen Canvas */
         .canvas-container {
-            background: #0f3460;
-            border-radius: 10px;
-            padding: 20px;
+            position: fixed;
+            inset: 0;
+            z-index: 0;
             display: flex;
-            flex-direction: column;
             align-items: center;
+            justify-content: center;
         }
 
         canvas {
-            background: #1a1a2e;
-            border-radius: 5px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+            display: block;
         }
 
-        .section {
-            margin-bottom: 25px;
+        /* Glassmorphism Panel Base */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
         }
 
-        .section h3 {
-            color: #00d9ff;
+        /* Left Control Panel */
+        .controls-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            width: 340px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            z-index: 10;
+            padding: 24px;
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        /* Right Math Panel */
+        .math-panel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 320px;
+            z-index: 10;
+            padding: 24px;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            color: #9CA3AF;
+            margin-bottom: 16px;
+        }
+
+        /* Matrix Input with Brackets */
+        .matrix-container {
+            margin-bottom: 24px;
+        }
+
+        .matrix-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 18px;
+            color: #06B6D4;
             margin-bottom: 12px;
-            font-size: 16px;
-            border-bottom: 2px solid #00d9ff;
-            padding-bottom: 5px;
+            font-weight: 600;
         }
 
-        .matrix-input {
+        .matrix-bracket-wrapper {
+            position: relative;
+            display: inline-block;
+            padding: 0 20px;
+        }
+
+        .matrix-bracket-wrapper::before,
+        .matrix-bracket-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 12px;
+            border: 2px solid #374151;
+        }
+
+        .matrix-bracket-wrapper::before {
+            left: 0;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .matrix-bracket-wrapper::after {
+            right: 0;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .matrix-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-bottom: 10px;
+            gap: 12px;
+            padding: 12px 8px;
         }
 
-        .matrix-input input {
-            background: #0f3460;
-            border: 1px solid #00d9ff;
-            color: #fff;
-            padding: 8px;
-            border-radius: 5px;
-            font-size: 14px;
+        .matrix-grid input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #F9FAFB;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 18px;
+            font-family: 'JetBrains Mono', monospace;
             text-align: center;
             width: 100%;
+            transition: all 0.2s;
             -moz-appearance: textfield;
         }
 
-        .matrix-input input::-webkit-outer-spin-button,
-        .matrix-input input::-webkit-inner-spin-button {
+        .matrix-grid input::-webkit-outer-spin-button,
+        .matrix-grid input::-webkit-inner-spin-button {
             -webkit-appearance: none;
             margin: 0;
         }
 
-        .matrix-input input:focus {
+        .matrix-grid input:hover {
+            border-color: rgba(6, 182, 212, 0.6);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .matrix-grid input:focus {
             outline: none;
-            border-color: #ff6b6b;
+            border-color: #06B6D4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.1);
         }
 
-        .preset-buttons {
-            display: grid;
-            grid-template-columns: 1fr;
+        /* Preset Carousel */
+        .preset-carousel {
+            margin-bottom: 24px;
+        }
+
+        .preset-scroll {
+            display: flex;
             gap: 8px;
+            overflow-x: auto;
+            padding: 4px 0 12px 0;
+            margin: 0 -4px;
         }
 
-        button {
-            background: #00d9ff;
-            color: #1a1a2e;
-            border: none;
-            padding: 10px;
-            border-radius: 5px;
+        .preset-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+
+        .preset-scroll::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+
+        .preset-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        .preset-chip {
+            flex-shrink: 0;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #D1D5DB;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .preset-chip:hover {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.4);
+            color: #06B6D4;
+            transform: translateY(-1px);
+        }
+
+        .preset-chip.active {
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border-color: #06B6D4;
+            color: #0B0F19;
             font-weight: 600;
+        }
+
+        /* Transform Description */
+        .transform-description {
+            background: rgba(6, 182, 212, 0.05);
+            border-left: 3px solid #06B6D4;
+            padding: 12px;
+            border-radius: 6px;
             font-size: 13px;
-            transition: all 0.3s;
-        }
-
-        button:hover {
-            background: #00b8d4;
-            transform: translateY(-2px);
-        }
-
-        button:active {
-            transform: translateY(0);
-        }
-
-        .control-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            margin-top: 10px;
-        }
-
-        .control-buttons button.play {
-            background: #4caf50;
-            grid-column: 1 / -1;
-        }
-
-        .control-buttons button.reset {
-            background: #ff6b6b;
-        }
-
-        .slider-control {
-            margin-top: 10px;
-        }
-
-        .slider-control label {
-            display: block;
-            margin-bottom: 5px;
-            font-size: 13px;
-            color: #aaa;
-        }
-
-        input[type="range"] {
-            width: 100%;
-            margin-bottom: 5px;
-        }
-
-        .info-panel {
-            background: #0f3460;
-            padding: 15px;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 12px;
             line-height: 1.6;
+            color: #D1D5DB;
+            margin-bottom: 24px;
         }
 
-        .info-panel h4 {
-            color: #00d9ff;
+        .transform-description .desc-title {
+            font-weight: 600;
+            color: #06B6D4;
+            margin-bottom: 4px;
+        }
+
+        /* Eigenvalue Cards */
+        .eigen-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .eigen-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .eigen-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .eigen-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #9CA3AF;
+            font-weight: 500;
+        }
+
+        .eigen-color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 12px currentColor;
+        }
+
+        .eigen-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 24px;
+            font-weight: 600;
             margin-bottom: 8px;
         }
 
-        .eigenvalue-display {
-            background: #1a1a2e;
-            padding: 10px;
-            border-radius: 5px;
-            margin-top: 8px;
-            font-family: 'Courier New', monospace;
-            font-size: 11px;
+        .eigen-vector {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 14px;
+            color: #9CA3AF;
         }
 
-        .eigenvalue-display div {
-            margin: 4px 0;
-        }
-
-        .legend {
-            display: flex;
-            gap: 15px;
-            justify-content: center;
-            margin-top: 15px;
+        .complex-warning {
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            border-radius: 8px;
+            padding: 12px;
             font-size: 13px;
+            color: #EC4899;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .complex-warning::before {
+            content: '⚠';
+            font-size: 18px;
+        }
+
+        /* Bottom Timeline Control */
+        .timeline-control {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(700px, calc(100vw - 48px));
+            z-index: 10;
+            padding: 20px 24px;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .play-button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border: none;
+            color: #0B0F19;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+        }
+
+        .play-button:active {
+            transform: scale(0.98);
+        }
+
+        .scrubber-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scrubber-track {
+            position: relative;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .scrubber-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #06B6D4 0%, #0891B2 100%);
+            border-radius: 3px;
+            transition: width 0.1s;
+        }
+
+        .scrubber-handle {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #06B6D4;
+            border: 3px solid #0B0F19;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .scrubber-handle:active {
+            cursor: grabbing;
+        }
+
+        .scrubber-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: #6B7280;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #D1D5DB;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+
+        .control-btn.reset {
+            color: #F87171;
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .control-btn.reset:hover {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: rgba(248, 113, 113, 0.5);
+        }
+
+        /* Speed Control */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #9CA3AF;
+        }
+
+        .speed-value {
+            font-family: 'JetBrains Mono', monospace;
+            color: #06B6D4;
+            font-weight: 600;
+            min-width: 40px;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10;
+            padding: 16px;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
 
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 5px;
+            gap: 10px;
+            font-size: 12px;
+            color: #D1D5DB;
         }
 
         .legend-color {
-            width: 20px;
-            height: 20px;
-            border-radius: 3px;
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px currentColor;
         }
 
-        @media (max-width: 900px) {
-            .main-content {
-                grid-template-columns: 1fr;
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .controls-panel {
+                width: 300px;
+            }
+
+            .math-panel {
+                width: 280px;
+            }
+
+            .timeline-control {
+                width: calc(100vw - 48px);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .controls-panel,
+            .math-panel {
+                width: calc(100vw - 48px);
+                max-width: 360px;
+            }
+
+            .legend {
+                left: 24px;
+                right: auto;
             }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Eigenvector Visualizer</h1>
-        <p class="subtitle">Explore linear transformations and eigenvectors interactively</p>
+    <!-- Full Screen Canvas -->
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
 
-        <div class="main-content">
-            <div class="controls-panel">
-                <div class="section">
-                    <h3>Transformation Matrix</h3>
-                    <div class="matrix-input">
-                        <input type="number" id="a11" value="2" step="0.1">
-                        <input type="number" id="a12" value="1" step="0.1">
-                        <input type="number" id="a21" value="1" step="0.1">
-                        <input type="number" id="a22" value="2" step="0.1">
-                    </div>
-                    <div class="control-buttons">
-                        <button class="play" onclick="app.playAnimation()">▶ Play Animation</button>
-                        <button onclick="app.stepForward()">Step →</button>
-                        <button class="reset" onclick="app.reset()">↺ Reset</button>
-                    </div>
-                    <div class="slider-control">
-                        <label>Animation Speed: <span id="speedValue">1.0</span>x</label>
-                        <input type="range" id="speedSlider" min="0.1" max="3" step="0.1" value="1"
-                               oninput="app.setSpeed(this.value)">
-                    </div>
+    <!-- Left Control Panel -->
+    <aside class="controls-panel glass-panel">
+        <!-- Matrix Input -->
+        <div class="matrix-container">
+            <div class="section-header">Transformation Matrix</div>
+            <div class="matrix-label">A =</div>
+            <div class="matrix-bracket-wrapper">
+                <div class="matrix-grid">
+                    <input type="number" id="a11" value="2" step="0.1">
+                    <input type="number" id="a12" value="1" step="0.1">
+                    <input type="number" id="a21" value="1" step="0.1">
+                    <input type="number" id="a22" value="2" step="0.1">
                 </div>
+            </div>
+        </div>
 
-                <div class="section">
-                    <h3>Preset Transformations</h3>
-                    <div class="preset-buttons">
-                        <button onclick="app.loadPreset('rotation')">🔄 Rotation (90°)</button>
-                        <button onclick="app.loadPreset('scaling')">⤢ Scaling (2x)</button>
-                        <button onclick="app.loadPreset('shearX')">⇉ Shear X</button>
-                        <button onclick="app.loadPreset('shearY')">⇊ Shear Y</button>
-                        <button onclick="app.loadPreset('reflection')">↔ Reflection (X-axis)</button>
-                        <button onclick="app.loadPreset('projection')">⊡ Projection</button>
-                        <button onclick="app.loadPreset('squeeze')">⇔ Squeeze Mapping</button>
-                    </div>
+        <!-- Preset Carousel -->
+        <div class="preset-carousel">
+            <div class="section-header">Presets</div>
+            <div class="preset-scroll">
+                <div class="preset-chip" data-preset="rotation">🔄 Rotation</div>
+                <div class="preset-chip" data-preset="scaling">⤢ Scaling</div>
+                <div class="preset-chip" data-preset="shearX">⇉ Shear X</div>
+                <div class="preset-chip" data-preset="shearY">⇊ Shear Y</div>
+                <div class="preset-chip" data-preset="reflection">↔ Reflection</div>
+                <div class="preset-chip" data-preset="projection">⊡ Projection</div>
+                <div class="preset-chip" data-preset="squeeze">⇔ Squeeze</div>
+            </div>
+        </div>
+
+        <!-- Transform Description -->
+        <div class="transform-description" id="transformDesc">
+            <div class="desc-title">Select a preset or enter custom values</div>
+            <div id="transformDescText">Experiment with different transformations to see how they affect vectors in 2D space.</div>
+        </div>
+    </aside>
+
+    <!-- Right Math Panel -->
+    <aside class="math-panel glass-panel">
+        <div class="section-header">Eigen Analysis</div>
+        <div class="eigen-cards" id="eigenCards">
+            <!-- Dynamically populated -->
+        </div>
+    </aside>
+
+    <!-- Bottom Timeline Control -->
+    <div class="timeline-control glass-panel">
+        <div class="playback-controls">
+            <button class="play-button" id="playBtn" onclick="app.togglePlay()">▶</button>
+
+            <div class="scrubber-container">
+                <div class="scrubber-track" id="scrubberTrack">
+                    <div class="scrubber-progress" id="scrubberProgress"></div>
+                    <div class="scrubber-handle" id="scrubberHandle"></div>
                 </div>
-
-                <div class="section">
-                    <h3>Information</h3>
-                    <div class="info-panel">
-                        <h4>Current Transformation</h4>
-                        <div id="transformInfo">Select a preset or enter custom values</div>
-                        <div class="eigenvalue-display" id="eigenInfo">
-                            <div>Calculating eigenvalues...</div>
-                        </div>
-                    </div>
+                <div class="scrubber-labels">
+                    <span>Identity (I)</span>
+                    <span id="progressPercent">0%</span>
+                    <span>Target (A)</span>
                 </div>
             </div>
 
-            <div class="canvas-container">
-                <canvas id="canvas" width="800" height="800"></canvas>
-                <div class="legend">
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #555;"></div>
-                        <span>Grid</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #00d9ff;"></div>
-                        <span>Eigenvector 1</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #ff6b6b;"></div>
-                        <span>Eigenvector 2</span>
-                    </div>
-                    <div class="legend-item">
-                        <div class="legend-color" style="background: #ffeb3b;"></div>
-                        <span>Test Vectors</span>
-                    </div>
-                </div>
+            <div class="control-buttons">
+                <button class="control-btn" onclick="app.stepForward()">Step →</button>
+                <button class="control-btn reset" onclick="app.reset()">↺ Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend glass-panel">
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #06B6D4; color: #06B6D4;"></div>
+                <span>Eigenvector 1</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #EC4899; color: #EC4899;"></div>
+                <span>Eigenvector 2</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #F59E0B; color: #F59E0B;"></div>
+                <span>Test Vectors</span>
             </div>
         </div>
     </div>

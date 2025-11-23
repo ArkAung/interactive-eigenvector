@@ -35,16 +35,12 @@ class Matrix2D {
         return this.a + this.d;
     }
 
-    // Calculate eigenvalues using characteristic equation
     eigenvalues() {
         const trace = this.trace();
         const det = this.determinant();
-
-        // Characteristic equation: λ² - trace*λ + det = 0
         const discriminant = trace * trace - 4 * det;
 
         if (discriminant < 0) {
-            // Complex eigenvalues
             const real = trace / 2;
             const imag = Math.sqrt(-discriminant) / 2;
             return {
@@ -53,7 +49,6 @@ class Matrix2D {
                 isComplex: true
             };
         } else {
-            // Real eigenvalues
             const sqrtDisc = Math.sqrt(discriminant);
             return {
                 lambda1: { real: (trace + sqrtDisc) / 2, imag: 0 },
@@ -63,9 +58,7 @@ class Matrix2D {
         }
     }
 
-    // Calculate eigenvector for a given eigenvalue
     eigenvector(lambda) {
-        // Solve (A - λI)v = 0
         const a = this.a - lambda;
         const b = this.b;
         const c = this.c;
@@ -73,7 +66,6 @@ class Matrix2D {
 
         let vx, vy;
 
-        // Try first row
         if (Math.abs(b) > 1e-10) {
             vx = -b;
             vy = a;
@@ -81,12 +73,10 @@ class Matrix2D {
             vx = -d;
             vy = c;
         } else {
-            // Degenerate case - pick arbitrary vector
             vx = 1;
             vy = 0;
         }
 
-        // Normalize
         const mag = Math.sqrt(vx * vx + vy * vy);
         return { x: vx / mag, y: vy / mag };
     }
@@ -95,7 +85,7 @@ class Matrix2D {
         const eigenvalues = this.eigenvalues();
 
         if (eigenvalues.isComplex) {
-            return null; // No real eigenvectors
+            return null;
         }
 
         const v1 = this.eigenvector(eigenvalues.lambda1.real);
@@ -154,9 +144,12 @@ class EigenvectorApp {
     constructor() {
         this.canvas = document.getElementById('canvas');
         this.ctx = this.canvas.getContext('2d');
-        this.width = this.canvas.width;
-        this.height = this.canvas.height;
-        this.scale = 60; // pixels per unit
+
+        // Set canvas to window size
+        this.resizeCanvas();
+        window.addEventListener('resize', () => this.resizeCanvas());
+
+        this.scale = 60;
         this.origin = { x: this.width / 2, y: this.height / 2 };
 
         // Animation state
@@ -167,7 +160,11 @@ class EigenvectorApp {
         this.animationSpeed = 1;
         this.animationId = null;
 
-        // Test vectors to show transformation
+        // Ghost trail history
+        this.eigenTrails = [[], []]; // Two trails for two eigenvectors
+        this.maxTrailLength = 30;
+
+        // Test vectors
         this.testVectors = [
             { x: 1, y: 0 },
             { x: 0, y: 1 },
@@ -178,8 +175,18 @@ class EigenvectorApp {
         ];
 
         this.setupInputListeners();
+        this.setupScrubber();
+        this.setupPresetChips();
         this.updateMatrixFromInputs();
         this.draw();
+    }
+
+    resizeCanvas() {
+        this.canvas.width = window.innerWidth;
+        this.canvas.height = window.innerHeight;
+        this.width = this.canvas.width;
+        this.height = this.canvas.height;
+        this.origin = { x: this.width / 2, y: this.height / 2 };
     }
 
     setupInputListeners() {
@@ -189,6 +196,62 @@ class EigenvectorApp {
                 this.updateMatrixFromInputs();
             });
         });
+    }
+
+    setupScrubber() {
+        const track = document.getElementById('scrubberTrack');
+        const handle = document.getElementById('scrubberHandle');
+        let isDragging = false;
+
+        const updateProgress = (clientX) => {
+            const rect = track.getBoundingClientRect();
+            const x = Math.max(0, Math.min(clientX - rect.left, rect.width));
+            const progress = x / rect.width;
+            this.setProgress(progress);
+        };
+
+        handle.addEventListener('mousedown', (e) => {
+            isDragging = true;
+            e.preventDefault();
+        });
+
+        track.addEventListener('mousedown', (e) => {
+            updateProgress(e.clientX);
+            isDragging = true;
+        });
+
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging) {
+                this.isAnimating = false;
+                updateProgress(e.clientX);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+    }
+
+    setupPresetChips() {
+        const chips = document.querySelectorAll('.preset-chip');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const preset = chip.dataset.preset;
+                this.loadPreset(preset);
+
+                // Update active state
+                chips.forEach(c => c.classList.remove('active'));
+                chip.classList.add('active');
+            });
+        });
+    }
+
+    setProgress(progress) {
+        this.animationProgress = Math.max(0, Math.min(1, progress));
+        const t = this.easeInOutCubic(this.animationProgress);
+        this.currentMatrix = Matrix2D.lerp(Matrix2D.identity(), this.targetMatrix, t);
+        this.updateProgressUI();
+        this.draw();
     }
 
     updateMatrixFromInputs() {
@@ -201,33 +264,62 @@ class EigenvectorApp {
         this.updateInfo();
 
         if (!this.isAnimating) {
+            const t = this.easeInOutCubic(this.animationProgress);
+            this.currentMatrix = Matrix2D.lerp(Matrix2D.identity(), this.targetMatrix, t);
             this.draw();
         }
     }
 
     updateInfo() {
         const eigenvalues = this.targetMatrix.eigenvalues();
-        const eigenInfo = document.getElementById('eigenInfo');
-
-        let html = '<div><strong>Eigenvalues:</strong></div>';
+        const eigenCards = document.getElementById('eigenCards');
 
         if (eigenvalues.isComplex) {
-            html += `<div>λ₁ = ${eigenvalues.lambda1.real.toFixed(3)} + ${eigenvalues.lambda1.imag.toFixed(3)}i</div>`;
-            html += `<div>λ₂ = ${eigenvalues.lambda2.real.toFixed(3)} - ${eigenvalues.lambda2.imag.toFixed(3)}i</div>`;
-            html += '<div style="color: #ff6b6b; margin-top: 8px;">Complex eigenvalues - no real eigenvectors</div>';
+            eigenCards.innerHTML = `
+                <div class="complex-warning">
+                    Complex eigenvalues detected: No real eigenvectors exist.
+                    This transformation involves rotation.
+                </div>
+                <div class="eigen-card">
+                    <div class="eigen-value" style="color: #06B6D4;">
+                        λ₁ = ${eigenvalues.lambda1.real.toFixed(3)} + ${eigenvalues.lambda1.imag.toFixed(3)}i
+                    </div>
+                </div>
+                <div class="eigen-card">
+                    <div class="eigen-value" style="color: #EC4899;">
+                        λ₂ = ${eigenvalues.lambda2.real.toFixed(3)} - ${eigenvalues.lambda2.imag.toFixed(3)}i
+                    </div>
+                </div>
+            `;
         } else {
-            html += `<div>λ₁ = ${eigenvalues.lambda1.real.toFixed(3)}</div>`;
-            html += `<div>λ₂ = ${eigenvalues.lambda2.real.toFixed(3)}</div>`;
-
             const eigenvectors = this.targetMatrix.getEigenvectors();
-            if (eigenvectors) {
-                html += '<div style="margin-top: 8px;"><strong>Eigenvectors:</strong></div>';
-                html += `<div>v₁ = (${eigenvectors.v1.x.toFixed(3)}, ${eigenvectors.v1.y.toFixed(3)})</div>`;
-                html += `<div>v₂ = (${eigenvectors.v2.x.toFixed(3)}, ${eigenvectors.v2.y.toFixed(3)})</div>`;
-            }
+            eigenCards.innerHTML = `
+                <div class="eigen-card">
+                    <div class="eigen-card-header">
+                        <span class="eigen-label">EIGENVECTOR 1</span>
+                        <div class="eigen-color-indicator" style="background: #06B6D4; color: #06B6D4;"></div>
+                    </div>
+                    <div class="eigen-value" style="color: #06B6D4;">
+                        λ₁ = ${eigenvectors.lambda1.toFixed(3)}
+                    </div>
+                    <div class="eigen-vector">
+                        v₁ = [${eigenvectors.v1.x.toFixed(3)}, ${eigenvectors.v1.y.toFixed(3)}]
+                    </div>
+                </div>
+                <div class="eigen-card">
+                    <div class="eigen-card-header">
+                        <span class="eigen-label">EIGENVECTOR 2</span>
+                        <div class="eigen-color-indicator" style="background: #EC4899; color: #EC4899;"></div>
+                    </div>
+                    <div class="eigen-value" style="color: #EC4899;">
+                        λ₂ = ${eigenvectors.lambda2.toFixed(3)}
+                    </div>
+                    <div class="eigen-vector">
+                        v₂ = [${eigenvectors.v2.x.toFixed(3)}, ${eigenvectors.v2.y.toFixed(3)}]
+                    </div>
+                </div>
+            `;
         }
-
-        eigenInfo.innerHTML = html;
     }
 
     loadPreset(presetName) {
@@ -236,44 +328,88 @@ class EigenvectorApp {
 
         this.targetMatrix = preset.matrix;
 
-        // Update input fields
         document.getElementById('a11').value = preset.matrix.a;
         document.getElementById('a12').value = preset.matrix.b;
         document.getElementById('a21').value = preset.matrix.c;
         document.getElementById('a22').value = preset.matrix.d;
 
-        // Update info
-        document.getElementById('transformInfo').innerHTML =
-            `<strong>${preset.name}</strong><p style="margin-top: 8px; font-size: 11px;">${preset.description}</p>`;
+        document.getElementById('transformDesc').innerHTML = `
+            <div class="desc-title">${preset.name}</div>
+            <div>${preset.description}</div>
+        `;
 
         this.updateInfo();
         this.reset();
     }
 
-    playAnimation() {
-        this.reset();
-        this.isAnimating = true;
-        this.animate();
+    togglePlay() {
+        const playBtn = document.getElementById('playBtn');
+
+        if (this.isAnimating) {
+            this.isAnimating = false;
+            playBtn.textContent = '▶';
+        } else {
+            if (this.animationProgress >= 1) {
+                this.reset();
+            }
+            this.isAnimating = true;
+            playBtn.textContent = '⏸';
+            this.animate();
+        }
     }
 
     animate() {
         if (!this.isAnimating) return;
 
-        this.animationProgress += 0.01 * this.animationSpeed;
+        this.animationProgress += 0.008 * this.animationSpeed;
 
         if (this.animationProgress >= 1) {
             this.animationProgress = 1;
             this.isAnimating = false;
+            document.getElementById('playBtn').textContent = '▶';
         }
 
-        // Ease in-out
         const t = this.easeInOutCubic(this.animationProgress);
         this.currentMatrix = Matrix2D.lerp(Matrix2D.identity(), this.targetMatrix, t);
 
+        // Record trail positions
+        this.recordTrails();
+
+        this.updateProgressUI();
         this.draw();
 
         if (this.isAnimating) {
             this.animationId = requestAnimationFrame(() => this.animate());
+        }
+    }
+
+    recordTrails() {
+        const eigenvectors = this.targetMatrix.getEigenvectors();
+        if (!eigenvectors) {
+            this.eigenTrails = [[], []];
+            return;
+        }
+
+        const scale = 3;
+
+        // Record eigenvector 1 position
+        const v1 = this.currentMatrix.transform(
+            eigenvectors.v1.x * scale,
+            eigenvectors.v1.y * scale
+        );
+        this.eigenTrails[0].push({ x: v1.x, y: v1.y });
+        if (this.eigenTrails[0].length > this.maxTrailLength) {
+            this.eigenTrails[0].shift();
+        }
+
+        // Record eigenvector 2 position
+        const v2 = this.currentMatrix.transform(
+            eigenvectors.v2.x * scale,
+            eigenvectors.v2.y * scale
+        );
+        this.eigenTrails[1].push({ x: v2.x, y: v2.y });
+        if (this.eigenTrails[1].length > this.maxTrailLength) {
+            this.eigenTrails[1].shift();
         }
     }
 
@@ -283,25 +419,32 @@ class EigenvectorApp {
 
     stepForward() {
         this.isAnimating = false;
-        this.animationProgress = Math.min(1, this.animationProgress + 0.1);
-        const t = this.easeInOutCubic(this.animationProgress);
-        this.currentMatrix = Matrix2D.lerp(Matrix2D.identity(), this.targetMatrix, t);
-        this.draw();
+        document.getElementById('playBtn').textContent = '▶';
+        this.setProgress(Math.min(1, this.animationProgress + 0.1));
     }
 
     reset() {
         this.isAnimating = false;
+        document.getElementById('playBtn').textContent = '▶';
         if (this.animationId) {
             cancelAnimationFrame(this.animationId);
         }
         this.animationProgress = 0;
         this.currentMatrix = Matrix2D.identity();
+        this.eigenTrails = [[], []];
+        this.updateProgressUI();
         this.draw();
     }
 
-    setSpeed(speed) {
-        this.animationSpeed = parseFloat(speed);
-        document.getElementById('speedValue').textContent = speed;
+    updateProgressUI() {
+        const progress = document.getElementById('scrubberProgress');
+        const handle = document.getElementById('scrubberHandle');
+        const percent = document.getElementById('progressPercent');
+
+        const percentage = this.animationProgress * 100;
+        progress.style.width = percentage + '%';
+        handle.style.left = percentage + '%';
+        percent.textContent = Math.round(percentage) + '%';
     }
 
     // Drawing functions
@@ -317,18 +460,17 @@ class EigenvectorApp {
 
         this.drawGrid();
         this.drawAxes();
+        this.drawGhostTrails();
         this.drawEigenvectors();
         this.drawTestVectors();
-        this.drawProgressIndicator();
     }
 
     drawGrid() {
-        this.ctx.strokeStyle = '#333';
+        this.ctx.strokeStyle = '#1F2937';
         this.ctx.lineWidth = 1;
 
-        const gridSize = 15;
+        const gridSize = Math.ceil(Math.max(this.width, this.height) / this.scale / 2) + 5;
 
-        // Draw grid lines
         for (let i = -gridSize; i <= gridSize; i++) {
             for (let j = -gridSize; j <= gridSize; j++) {
                 const p1 = this.currentMatrix.transform(i, j);
@@ -353,22 +495,22 @@ class EigenvectorApp {
     }
 
     drawAxes() {
-        const maxDist = 10;
+        const maxDist = Math.max(this.width, this.height) / this.scale;
 
-        // X-axis (transformed)
+        // X-axis
         const xAxis = this.currentMatrix.transform(maxDist, 0);
         const xAxisNeg = this.currentMatrix.transform(-maxDist, 0);
         const xStart = this.toScreenCoords(xAxisNeg.x, xAxisNeg.y);
         const xEnd = this.toScreenCoords(xAxis.x, xAxis.y);
 
-        this.ctx.strokeStyle = '#666';
+        this.ctx.strokeStyle = '#374151';
         this.ctx.lineWidth = 2;
         this.ctx.beginPath();
         this.ctx.moveTo(xStart.x, xStart.y);
         this.ctx.lineTo(xEnd.x, xEnd.y);
         this.ctx.stroke();
 
-        // Y-axis (transformed)
+        // Y-axis
         const yAxis = this.currentMatrix.transform(0, maxDist);
         const yAxisNeg = this.currentMatrix.transform(0, -maxDist);
         const yStart = this.toScreenCoords(yAxisNeg.x, yAxisNeg.y);
@@ -380,22 +522,49 @@ class EigenvectorApp {
         this.ctx.stroke();
     }
 
+    drawGhostTrails() {
+        const colors = ['#06B6D4', '#EC4899'];
+
+        this.eigenTrails.forEach((trail, idx) => {
+            if (trail.length < 2) return;
+
+            for (let i = 0; i < trail.length - 1; i++) {
+                const alpha = (i / trail.length) * 0.3;
+                const point = trail[i];
+                const nextPoint = trail[i + 1];
+
+                const start = this.toScreenCoords(point.x, point.y);
+                const end = this.toScreenCoords(nextPoint.x, nextPoint.y);
+
+                this.ctx.strokeStyle = colors[idx] + Math.floor(alpha * 255).toString(16).padStart(2, '0');
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.moveTo(start.x, start.y);
+                this.ctx.lineTo(end.x, end.y);
+                this.ctx.stroke();
+            }
+        });
+    }
+
     drawVector(x, y, color, lineWidth = 3, label = '') {
         const transformed = this.currentMatrix.transform(x, y);
         const start = this.toScreenCoords(0, 0);
         const end = this.toScreenCoords(transformed.x, transformed.y);
 
-        // Draw line
+        // Draw line with glow
+        this.ctx.shadowBlur = 15;
+        this.ctx.shadowColor = color;
         this.ctx.strokeStyle = color;
         this.ctx.lineWidth = lineWidth;
         this.ctx.beginPath();
         this.ctx.moveTo(start.x, start.y);
         this.ctx.lineTo(end.x, end.y);
         this.ctx.stroke();
+        this.ctx.shadowBlur = 0;
 
         // Draw arrowhead
         const angle = Math.atan2(end.y - start.y, end.x - start.x);
-        const headLength = 12;
+        const headLength = 15;
 
         this.ctx.fillStyle = color;
         this.ctx.beginPath();
@@ -414,8 +583,8 @@ class EigenvectorApp {
         // Draw label
         if (label) {
             this.ctx.fillStyle = color;
-            this.ctx.font = 'bold 12px monospace';
-            this.ctx.fillText(label, end.x + 10, end.y - 10);
+            this.ctx.font = 'bold 13px "JetBrains Mono", monospace';
+            this.ctx.fillText(label, end.x + 15, end.y - 10);
         }
     }
 
@@ -425,74 +594,41 @@ class EigenvectorApp {
 
         const scale = 3;
 
-        // Draw eigenvector 1
+        // Draw eigenvector 1 (both directions)
         this.drawVector(
             eigenvectors.v1.x * scale,
             eigenvectors.v1.y * scale,
-            '#00d9ff',
-            4,
+            '#06B6D4',
+            5,
             `λ₁=${eigenvectors.lambda1.toFixed(2)}`
         );
-
-        // Draw opposite direction
         this.drawVector(
             -eigenvectors.v1.x * scale,
             -eigenvectors.v1.y * scale,
-            '#00d9ff',
-            4
+            '#06B6D4',
+            5
         );
 
-        // Draw eigenvector 2
+        // Draw eigenvector 2 (both directions)
         this.drawVector(
             eigenvectors.v2.x * scale,
             eigenvectors.v2.y * scale,
-            '#ff6b6b',
-            4,
+            '#EC4899',
+            5,
             `λ₂=${eigenvectors.lambda2.toFixed(2)}`
         );
-
-        // Draw opposite direction
         this.drawVector(
             -eigenvectors.v2.x * scale,
             -eigenvectors.v2.y * scale,
-            '#ff6b6b',
-            4
+            '#EC4899',
+            5
         );
     }
 
     drawTestVectors() {
         this.testVectors.forEach(vec => {
-            this.drawVector(vec.x, vec.y, '#ffeb3b', 2);
+            this.drawVector(vec.x, vec.y, '#F59E0B', 2);
         });
-    }
-
-    drawProgressIndicator() {
-        const barWidth = 200;
-        const barHeight = 6;
-        const x = this.width - barWidth - 20;
-        const y = 20;
-
-        // Background
-        this.ctx.fillStyle = '#333';
-        this.ctx.fillRect(x, y, barWidth, barHeight);
-
-        // Progress
-        this.ctx.fillStyle = '#00d9ff';
-        this.ctx.fillRect(x, y, barWidth * this.animationProgress, barHeight);
-
-        // Border
-        this.ctx.strokeStyle = '#00d9ff';
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeRect(x, y, barWidth, barHeight);
-
-        // Text
-        this.ctx.fillStyle = '#fff';
-        this.ctx.font = '11px monospace';
-        this.ctx.fillText(
-            `Progress: ${(this.animationProgress * 100).toFixed(0)}%`,
-            x,
-            y - 5
-        );
     }
 }
 
