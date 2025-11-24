@@ -601,6 +601,12 @@ class EigenvectorApp {
                 e.preventDefault();
                 this.stepBackward();
             }
+
+            // H - Toggle Help
+            if (e.code === 'KeyH' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.toggleHelp();
+            }
         });
     }
 
