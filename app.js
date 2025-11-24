@@ -199,6 +199,7 @@ class EigenvectorApp {
         this.setupScrubber();
         this.setupPresetChips();
         this.setupMouseTracking();
+        this.setupKeyboardShortcuts();
         this.syncDeterminantCheckbox();
         this.updateMatrixFromInputs();
         this.draw();
@@ -566,6 +567,27 @@ class EigenvectorApp {
 
             if (!this.isAnimating) {
                 this.draw();
+            }
+        });
+    }
+
+    setupKeyboardShortcuts() {
+        document.addEventListener('keydown', (e) => {
+            // Ignore if user is typing in an input field
+            if (e.target.tagName === 'INPUT') {
+                return;
+            }
+
+            // Space - Play/Pause
+            if (e.code === 'Space') {
+                e.preventDefault();
+                this.toggleAnimation();
+            }
+
+            // R - Randomize
+            if (e.code === 'KeyR' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.randomizeMatrix();
             }
         });
     }
