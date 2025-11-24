@@ -715,6 +715,30 @@ class EigenvectorApp {
                 e.preventDefault();
                 this.clearCustomVectors();
             }
+
+            // Number keys 1-7 - Load presets
+            const presetMap = {
+                'Digit1': 'rotation',
+                'Digit2': 'scaling',
+                'Digit3': 'shearX',
+                'Digit4': 'shearY',
+                'Digit5': 'reflection',
+                'Digit6': 'projection',
+                'Digit7': 'squeeze'
+            };
+
+            if (presetMap[e.code] && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.loadPreset(presetMap[e.code]);
+
+                // Update active preset chip
+                document.querySelectorAll('.preset-chip').forEach(chip => {
+                    chip.classList.remove('active');
+                    if (chip.dataset.preset === presetMap[e.code]) {
+                        chip.classList.add('active');
+                    }
+                });
+            }
         });
     }
 
