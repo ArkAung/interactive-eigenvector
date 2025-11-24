@@ -569,6 +569,108 @@ class EigenvectorApp {
                 this.draw();
             }
         });
+
+        // Touch event support for mobile
+        this.setupTouchEvents();
+    }
+
+    setupTouchEvents() {
+        let lastTouchDistance = 0;
+
+        // Touch start
+        this.canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const rect = this.canvas.getBoundingClientRect();
+                const screenX = touch.clientX - rect.left;
+                const screenY = touch.clientY - rect.top;
+
+                // Simulate mouse position
+                this.mousePos = { x: screenX, y: screenY };
+
+                // Trigger mousedown logic
+                const mouseDownEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                this.canvas.dispatchEvent(mouseDownEvent);
+            } else if (e.touches.length === 2) {
+                // Pinch to zoom - store initial distance
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+            }
+        });
+
+        // Touch move
+        this.canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const rect = this.canvas.getBoundingClientRect();
+                const screenX = touch.clientX - rect.left;
+                const screenY = touch.clientY - rect.top;
+
+                this.mousePos = { x: screenX, y: screenY };
+
+                // Trigger mousemove logic
+                const mouseMoveEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                this.canvas.dispatchEvent(mouseMoveEvent);
+            } else if (e.touches.length === 2) {
+                // Pinch to zoom
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+
+                if (lastTouchDistance > 0) {
+                    const zoomFactor = currentDistance / lastTouchDistance;
+                    this.scale *= zoomFactor;
+                    this.scale = Math.max(20, Math.min(200, this.scale));
+
+                    if (!this.isAnimating) {
+                        this.draw();
+                    }
+                }
+
+                lastTouchDistance = currentDistance;
+            }
+        });
+
+        // Touch end
+        this.canvas.addEventListener('touchend', (e) => {
+            e.preventDefault();
+
+            if (e.touches.length === 0) {
+                // Trigger mouseup logic
+                const mouseUpEvent = new MouseEvent('mouseup');
+                this.canvas.dispatchEvent(mouseUpEvent);
+
+                this.mousePos = null;
+                lastTouchDistance = 0;
+            }
+        });
+
+        // Touch cancel
+        this.canvas.addEventListener('touchcancel', (e) => {
+            e.preventDefault();
+            this.mousePos = null;
+            lastTouchDistance = 0;
+            this.isDraggingNewVector = false;
+            this.isDraggingExistingVector = false;
+            this.isDraggingEigenvector = false;
+        });
     }
 
     setupKeyboardShortcuts() {

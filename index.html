@@ -772,16 +772,102 @@
             }
         }
 
+        /* Mobile Responsive Styles */
         @media (max-width: 768px) {
-            .controls-panel,
-            .math-panel {
-                width: calc(100vw - 48px);
-                max-width: 360px;
+            /* Stack panels vertically */
+            .controls-panel {
+                position: relative;
+                top: auto;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                border-radius: 0;
+                padding: 16px;
+                margin-bottom: 80px;
             }
 
+            .math-panel {
+                top: auto;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 16px 16px 0 0;
+                padding: 16px;
+            }
+
+            /* Larger touch targets */
+            .preset-chip {
+                padding: 14px 18px;
+                font-size: 15px;
+                min-height: 48px;
+            }
+
+            .matrix-grid input {
+                padding: 18px;
+                font-size: 28px;
+                min-height: 60px;
+            }
+
+            .control-btn,
+            .speed-btn {
+                padding: 12px 18px;
+                font-size: 15px;
+                min-height: 44px;
+            }
+
+            .randomize-btn,
+            .clear-vectors-btn {
+                padding: 14px 20px;
+                font-size: 15px;
+                min-height: 48px;
+            }
+
+            /* Help button positioning */
+            .help-button {
+                bottom: 90px;
+                left: 16px;
+            }
+
+            .help-panel {
+                bottom: 156px;
+                left: 16px;
+                right: 16px;
+                width: auto;
+                max-height: 60vh;
+            }
+
+            /* Hide legend on small screens */
             .legend {
-                left: 24px;
-                right: auto;
+                display: none;
+            }
+
+            /* Make playback controls stack better */
+            .playback-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .scrubber-container {
+                min-width: 100%;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                flex-direction: column;
+            }
+
+            .control-btn {
+                width: 100%;
             }
         }
     </style>
