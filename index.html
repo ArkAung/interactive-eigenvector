@@ -654,12 +654,11 @@
 
         .help-item-icon {
             flex-shrink: 0;
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #06B6D4;
+            margin-top: 6px;
         }
 
         .help-key {
@@ -962,24 +961,24 @@
 
     <!-- Help Panel -->
     <div class="help-panel" id="helpPanel">
-        <h2>📚 Guide & Shortcuts</h2>
+        <h2>Guide & Shortcuts</h2>
 
         <div class="help-section">
             <h3>Keyboard Shortcuts</h3>
             <div class="help-item">
-                <div class="help-item-icon">⌨️</div>
+                <div class="help-item-icon"></div>
                 <div><span class="help-key">Space</span> Play/Pause animation</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">⌨️</div>
+                <div class="help-item-icon"></div>
                 <div><span class="help-key">→</span> Step forward</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">⌨️</div>
+                <div class="help-item-icon"></div>
                 <div><span class="help-key">←</span> Step backward</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">⌨️</div>
+                <div class="help-item-icon"></div>
                 <div><span class="help-key">R</span> Randomize matrix</div>
             </div>
         </div>
@@ -987,19 +986,19 @@
         <div class="help-section">
             <h3>Mouse Controls</h3>
             <div class="help-item">
-                <div class="help-item-icon">🖱️</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Scroll wheel</strong> - Zoom in/out</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">🖱️</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Click & drag on canvas</strong> - Draw custom vectors</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">🖱️</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Drag eigenvector tips</strong> - Reconstruct transformation matrix</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">🖱️</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Hover over eigenvectors</strong> - See scaling information</div>
             </div>
         </div>
@@ -1007,23 +1006,23 @@
         <div class="help-section">
             <h3>Features</h3>
             <div class="help-item">
-                <div class="help-item-icon">🎯</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Eigenvectors</strong> - Cyan and pink vectors that maintain direction during transformation</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">📊</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Determinant visualization</strong> - Shows area scaling factor (det = λ₁ × λ₂)</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">🎲</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Randomize</strong> - Generate random transformation matrices</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">🎨</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Custom vectors</strong> - Draw your own vectors to see how they transform</div>
             </div>
             <div class="help-item">
-                <div class="help-item-icon">⚡</div>
+                <div class="help-item-icon"></div>
                 <div><strong>Animation speed</strong> - Control transformation speed (0.5×, 1×, 2×)</div>
             </div>
         </div>
@@ -1031,7 +1030,7 @@
         <div class="help-section">
             <h3>Understanding Eigenvectors</h3>
             <div class="help-item">
-                <div class="help-item-icon">💡</div>
+                <div class="help-item-icon"></div>
                 <div>Eigenvectors only scale (stretch/compress), they don't rotate. Yellow test vectors show typical transformation behavior for comparison.</div>
             </div>
         </div>
