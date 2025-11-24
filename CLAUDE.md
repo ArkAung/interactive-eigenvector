@@ -1,0 +1,1 @@
+- make sure to remember to add and commit with git but the messages should be one line and shoul not contain the mention of claude code

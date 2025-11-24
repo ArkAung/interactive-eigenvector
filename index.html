@@ -450,6 +450,19 @@
             cursor: pointer;
             transition: all 0.2s;
             font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .control-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
         }
 
         .control-btn:hover {
@@ -679,28 +692,32 @@
                 </div>
                 <div class="preset-chip" data-preset="shearX">
                     <svg viewBox="0 0 24 24">
-                        <path d="M6 6h12M8 18h12M6 6l2 12M18 6l2 12"></path>
+                        <path d="M6 8h10l2 8H8z"></path>
                     </svg>
                     <span>Shear X</span>
                 </div>
                 <div class="preset-chip" data-preset="shearY">
                     <svg viewBox="0 0 24 24">
-                        <path d="M6 6v12M18 8v12M6 6h12M6 18l12 -2"></path>
+                        <path d="M8 6h8l2 10h-8z"></path>
                     </svg>
                     <span>Shear Y</span>
                 </div>
                 <div class="preset-chip" data-preset="reflection">
                     <svg viewBox="0 0 24 24">
-                        <path d="M12 3v18"></path>
-                        <path d="M8 7L4 12l4 5M16 7l4 5-4 5"></path>
+                        <line x1="12" y1="4" x2="12" y2="20" stroke-dasharray="2,2"></line>
+                        <circle cx="8" cy="10" r="1.5" fill="currentColor"></circle>
+                        <circle cx="16" cy="10" r="1.5" fill="currentColor"></circle>
+                        <path d="M8 10v6M16 10v6"></path>
                     </svg>
                     <span>Reflection</span>
                 </div>
                 <div class="preset-chip" data-preset="projection">
                     <svg viewBox="0 0 24 24">
-                        <path d="M4 18h16"></path>
-                        <path d="M7 6v8M12 4v10M17 8v6"></path>
-                        <path d="M7 14l5 4 5-4"></path>
+                        <line x1="4" y1="18" x2="20" y2="18" stroke-width="2.5"></line>
+                        <path d="M7 6v8M12 4v10M17 7v7"></path>
+                        <circle cx="7" cy="18" r="1.5" fill="currentColor"></circle>
+                        <circle cx="12" cy="18" r="1.5" fill="currentColor"></circle>
+                        <circle cx="17" cy="18" r="1.5" fill="currentColor"></circle>
                     </svg>
                     <span>Projection</span>
                 </div>
@@ -768,8 +785,19 @@
             </div>
 
             <div class="control-buttons">
-                <button class="control-btn" onclick="app.stepForward()">Step →</button>
-                <button class="control-btn reset" onclick="app.reset()">↺ Reset</button>
+                <button class="control-btn" onclick="app.stepForward()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                    <span>Step</span>
+                </button>
+                <button class="control-btn reset" onclick="app.reset()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Reset</span>
+                </button>
             </div>
 
             <div class="speed-control">
