@@ -886,15 +886,18 @@ class EigenvectorApp {
             chip.classList.remove('active');
         });
 
+        // Reset animation state to ensure clean redraw
+        this.animationProgress = 0;
+        this.currentMatrix = Matrix2D.identity();
+
         // Update matrix inputs and apply transformation
         this.targetMatrix = matrix;
-        this.currentMatrix = matrix;
         this.updateMatrixInputFields(matrix);
         this.updateInfo();
+        this.updateProgressUI();
 
-        if (!this.isAnimating) {
-            this.draw();
-        }
+        // Force a redraw
+        this.draw();
     }
 
     reconstructMatrixFromEigenvectors(v1, lambda1, v2, lambda2) {
