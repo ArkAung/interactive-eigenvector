@@ -581,7 +581,7 @@ class EigenvectorApp {
             // Space - Play/Pause
             if (e.code === 'Space') {
                 e.preventDefault();
-                this.toggleAnimation();
+                this.togglePlay();
             }
 
             // R - Randomize
