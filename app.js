@@ -607,6 +607,12 @@ class EigenvectorApp {
                 e.preventDefault();
                 this.toggleHelp();
             }
+
+            // C - Clear Custom Vectors
+            if (e.code === 'KeyC' && !e.ctrlKey && !e.metaKey) {
+                e.preventDefault();
+                this.clearCustomVectors();
+            }
         });
     }
 
