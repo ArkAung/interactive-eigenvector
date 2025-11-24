@@ -589,6 +589,18 @@ class EigenvectorApp {
                 e.preventDefault();
                 this.randomizeMatrix();
             }
+
+            // Right Arrow - Step Forward
+            if (e.code === 'ArrowRight') {
+                e.preventDefault();
+                this.stepForward();
+            }
+
+            // Left Arrow - Step Backward
+            if (e.code === 'ArrowLeft') {
+                e.preventDefault();
+                this.stepBackward();
+            }
         });
     }
 
@@ -793,6 +805,12 @@ class EigenvectorApp {
         this.isAnimating = false;
         document.getElementById('playBtn').textContent = '▶';
         this.setProgress(Math.min(1, this.animationProgress + 0.1));
+    }
+
+    stepBackward() {
+        this.isAnimating = false;
+        document.getElementById('playBtn').textContent = '▶';
+        this.setProgress(Math.max(0, this.animationProgress - 0.1));
     }
 
     reset() {
