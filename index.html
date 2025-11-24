@@ -548,6 +548,133 @@
             accent-color: #06B6D4;
         }
 
+        /* Help Button */
+        .help-button {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border: none;
+            color: #0B0F19;
+            font-size: 24px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(6, 182, 212, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 24px rgba(6, 182, 212, 0.6);
+        }
+
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Help Panel */
+        .help-panel {
+            position: fixed;
+            bottom: 90px;
+            left: 24px;
+            width: 420px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            padding: 24px;
+            z-index: 99;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .help-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .help-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .help-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .help-panel::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.3);
+            border-radius: 3px;
+        }
+
+        .help-panel h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #06B6D4;
+            margin: 0 0 16px 0;
+        }
+
+        .help-section {
+            margin-bottom: 24px;
+        }
+
+        .help-section h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 12px 0;
+        }
+
+        .help-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #D1D5DB;
+        }
+
+        .help-item-icon {
+            flex-shrink: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .help-key {
+            display: inline-block;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #06B6D4;
+            margin: 0 2px;
+        }
+
         .checkbox-label:hover span {
             color: #F3F4F6;
         }
@@ -826,6 +953,86 @@
             <div class="legend-item">
                 <div class="legend-color" style="background: rgba(156, 163, 175, 0.5); color: rgba(156, 163, 175, 0.5); border: 1px dashed rgba(156, 163, 175, 0.8);"></div>
                 <span>Test Vectors (Before)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Button -->
+    <button class="help-button" id="helpBtn" onclick="app.toggleHelp()">?</button>
+
+    <!-- Help Panel -->
+    <div class="help-panel" id="helpPanel">
+        <h2>📚 Guide & Shortcuts</h2>
+
+        <div class="help-section">
+            <h3>Keyboard Shortcuts</h3>
+            <div class="help-item">
+                <div class="help-item-icon">⌨️</div>
+                <div><span class="help-key">Space</span> Play/Pause animation</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">⌨️</div>
+                <div><span class="help-key">→</span> Step forward</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">⌨️</div>
+                <div><span class="help-key">←</span> Step backward</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">⌨️</div>
+                <div><span class="help-key">R</span> Randomize matrix</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Mouse Controls</h3>
+            <div class="help-item">
+                <div class="help-item-icon">🖱️</div>
+                <div><strong>Scroll wheel</strong> - Zoom in/out</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">🖱️</div>
+                <div><strong>Click & drag on canvas</strong> - Draw custom vectors</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">🖱️</div>
+                <div><strong>Drag eigenvector tips</strong> - Reconstruct transformation matrix</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">🖱️</div>
+                <div><strong>Hover over eigenvectors</strong> - See scaling information</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Features</h3>
+            <div class="help-item">
+                <div class="help-item-icon">🎯</div>
+                <div><strong>Eigenvectors</strong> - Cyan and pink vectors that maintain direction during transformation</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">📊</div>
+                <div><strong>Determinant visualization</strong> - Shows area scaling factor (det = λ₁ × λ₂)</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">🎲</div>
+                <div><strong>Randomize</strong> - Generate random transformation matrices</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">🎨</div>
+                <div><strong>Custom vectors</strong> - Draw your own vectors to see how they transform</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon">⚡</div>
+                <div><strong>Animation speed</strong> - Control transformation speed (0.5×, 1×, 2×)</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Understanding Eigenvectors</h3>
+            <div class="help-item">
+                <div class="help-item-icon">💡</div>
+                <div>Eigenvectors only scale (stretch/compress), they don't rotate. Yellow test vectors show typical transformation behavior for comparison.</div>
             </div>
         </div>
     </div>

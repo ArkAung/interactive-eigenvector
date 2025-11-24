@@ -853,6 +853,11 @@ class EigenvectorApp {
         }
     }
 
+    toggleHelp() {
+        const helpPanel = document.getElementById('helpPanel');
+        helpPanel.classList.toggle('visible');
+    }
+
     randomizeMatrix() {
         // Generate random matrix values between -3 and 3
         const randomValue = () => (Math.random() * 6 - 3).toFixed(2);
