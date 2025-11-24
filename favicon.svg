@@ -1,22 +1,35 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
   <defs>
-    <marker id="arrow-cyan" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <polygon points="0 0, 10 5, 0 10" fill="#06B6D4" />
-    </marker>
-    <marker id="arrow-pink" markerWidth="10" markerHeight="10" refX="9" refY="5" orient="auto">
-      <polygon points="0 0, 10 5, 0 10" fill="#EC4899" />
-    </marker>
+    <filter id="glow-cyan">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="glow-magenta">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge>
+        <feMergeNode in="coloredBlur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
   </defs>
 
   <rect width="100" height="100" fill="#0B0F19"/>
 
-  <!-- Original basis square (faded) -->
-  <rect x="25" y="25" width="25" height="25" fill="none" stroke="#374151" stroke-width="2" stroke-dasharray="4,4" opacity="0.5" />
+  <!-- Cyan vector -->
+  <g filter="url(#glow-cyan)">
+    <line x1="50" y1="50" x2="85" y2="35" stroke="#06B6D4" stroke-width="5" stroke-linecap="round"/>
+    <polygon points="85,35 78,33 80,38 76,37" fill="#06B6D4"/>
+  </g>
 
-  <!-- Transformed parallelogram -->
-  <path d="M 25 25 L 60 35 L 70 65 L 35 55 Z" fill="none" stroke="#06B6D4" stroke-width="2.5" />
+  <!-- Magenta vector -->
+  <g filter="url(#glow-magenta)">
+    <line x1="50" y1="50" x2="35" y2="80" stroke="#EC4899" stroke-width="5" stroke-linecap="round"/>
+    <polygon points="35,80 37,73 32,75 33,70" fill="#EC4899"/>
+  </g>
 
-  <!-- Eigenvector arrows -->
-  <line x1="25" y1="25" x2="58" y2="34" stroke="#06B6D4" stroke-width="3.5" marker-end="url(#arrow-cyan)" stroke-linecap="round" />
-  <line x1="25" y1="25" x2="36" y2="53" stroke="#EC4899" stroke-width="3.5" marker-end="url(#arrow-pink)" stroke-linecap="round" />
+  <!-- Origin dot -->
+  <circle cx="50" cy="50" r="3" fill="#FFFFFF"/>
 </svg>
