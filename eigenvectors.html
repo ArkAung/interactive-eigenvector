@@ -1,0 +1,1192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Eigenvector Visualizer</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: #0B0F19;
+            color: #E5E7EB;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        /* Full Screen Canvas */
+        .canvas-container {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* Glassmorphism Panel Base */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        /* Left Control Panel */
+        .controls-panel {
+            position: absolute;
+            top: 24px;
+            left: 24px;
+            width: 340px;
+            max-height: calc(100vh - 48px);
+            overflow-y: auto;
+            z-index: 10;
+            padding: 24px;
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+
+        /* Right Math Panel */
+        .math-panel {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            width: 320px;
+            z-index: 10;
+            padding: 24px;
+        }
+
+        /* Section Headers */
+        .section-header {
+            font-family: 'Inter', sans-serif;
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: #9CA3AF;
+            margin-bottom: 16px;
+        }
+
+        /* Matrix Input with Brackets */
+        .matrix-container {
+            margin-bottom: 24px;
+        }
+
+        .matrix-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 22px;
+            color: #06B6D4;
+            margin-bottom: 12px;
+            font-weight: 700;
+        }
+
+        .matrix-bracket-wrapper {
+            position: relative;
+            display: inline-block;
+            padding: 0 20px;
+        }
+
+        .matrix-bracket-wrapper::before,
+        .matrix-bracket-wrapper::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 12px;
+            border: 2px solid #374151;
+        }
+
+        .matrix-bracket-wrapper::before {
+            left: 0;
+            border-right: none;
+            border-radius: 4px 0 0 4px;
+        }
+
+        .matrix-bracket-wrapper::after {
+            right: 0;
+            border-left: none;
+            border-radius: 0 4px 4px 0;
+        }
+
+        .matrix-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            padding: 12px 8px;
+        }
+
+        .matrix-grid input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: #F9FAFB;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 26px;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            text-align: center;
+            width: 100%;
+            transition: all 0.2s;
+            -moz-appearance: textfield;
+        }
+
+        .matrix-grid input::-webkit-outer-spin-button,
+        .matrix-grid input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .matrix-grid input:hover {
+            border-color: rgba(6, 182, 212, 0.6);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .matrix-grid input:focus {
+            outline: none;
+            border-color: #06B6D4;
+            box-shadow: 0 0 0 3px rgba(6, 182, 212, 0.2), 0 0 20px rgba(6, 182, 212, 0.3);
+            background: rgba(15, 23, 42, 0.9);
+        }
+
+        /* Preset Grid */
+        .preset-carousel {
+            margin-bottom: 24px;
+        }
+
+        .preset-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+
+        .preset-chip {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #D1D5DB;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .preset-chip:hover {
+            background: rgba(6, 182, 212, 0.1);
+            border-color: rgba(6, 182, 212, 0.4);
+            color: #06B6D4;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(6, 182, 212, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .preset-chip.active {
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border-color: #06B6D4;
+            color: #0B0F19;
+            font-weight: 600;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.4), 0 2px 6px rgba(6, 182, 212, 0.2);
+        }
+
+        .preset-chip svg {
+            width: 18px;
+            height: 18px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .preset-chip.active svg {
+            stroke: #0B0F19;
+        }
+
+        /* Transform Description */
+        .transform-description {
+            background: rgba(6, 182, 212, 0.05);
+            border-left: 3px solid #06B6D4;
+            padding: 14px;
+            border-radius: 8px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #D1D5DB;
+            margin-bottom: 24px;
+        }
+
+        .transform-description .desc-title {
+            font-family: 'Inter', sans-serif;
+            font-weight: 600;
+            color: #06B6D4;
+            margin-bottom: 6px;
+            font-size: 15px;
+        }
+
+        /* Eigenvalue Cards */
+        .eigen-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .eigen-card {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 16px;
+        }
+
+        .eigen-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .eigen-label {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: #9CA3AF;
+            font-weight: 500;
+        }
+
+        .eigen-color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            box-shadow: 0 0 12px currentColor;
+        }
+
+        .eigen-value {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .eigen-vector {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 16px;
+            color: #9CA3AF;
+        }
+
+        .complex-warning {
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid rgba(236, 72, 153, 0.3);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 13px;
+            color: #EC4899;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .complex-warning::before {
+            content: '⚠';
+            font-size: 18px;
+        }
+
+        /* Characteristic Equation */
+        .char-equation {
+            background: rgba(6, 182, 212, 0.08);
+            border: 1px solid rgba(6, 182, 212, 0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 17px;
+            color: #06B6D4;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        .char-equation-label {
+            font-family: 'Inter', sans-serif;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6B7280;
+            margin-bottom: 6px;
+        }
+
+        /* Bottom Timeline Control */
+        .timeline-control {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: min(700px, calc(100vw - 48px));
+            z-index: 10;
+            padding: 20px 24px;
+        }
+
+        .playback-controls {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .play-button {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border: none;
+            color: #0B0F19;
+            font-size: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(6, 182, 212, 0.3);
+        }
+
+        .play-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 16px rgba(6, 182, 212, 0.4);
+        }
+
+        .play-button:active {
+            transform: scale(0.98);
+        }
+
+        .scrubber-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .scrubber-track {
+            position: relative;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .scrubber-progress {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #06B6D4 0%, #0891B2 100%);
+            border-radius: 3px;
+            transition: width 0.1s;
+        }
+
+        .scrubber-handle {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 16px;
+            height: 16px;
+            background: #06B6D4;
+            border: 3px solid #0B0F19;
+            border-radius: 50%;
+            cursor: grab;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .scrubber-handle:active {
+            cursor: grabbing;
+        }
+
+        .scrubber-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: #6B7280;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+
+        .control-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #D1D5DB;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.4), 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .control-btn.reset {
+            color: #F87171;
+            border-color: rgba(248, 113, 113, 0.3);
+        }
+
+        .control-btn.reset:hover {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: rgba(248, 113, 113, 0.5);
+        }
+
+        /* Clear Vectors Button */
+        .clear-vectors-btn {
+            width: 100%;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #F87171;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .clear-vectors-btn:hover {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(239, 68, 68, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .clear-vectors-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Randomize Button */
+        .randomize-btn {
+            width: 100%;
+            background: rgba(139, 92, 246, 0.1);
+            border: 1px solid rgba(139, 92, 246, 0.3);
+            color: #A78BFA;
+            padding: 10px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+            margin-top: 12px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        .randomize-btn:hover {
+            background: rgba(139, 92, 246, 0.2);
+            border-color: rgba(139, 92, 246, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(139, 92, 246, 0.2), 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .randomize-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* Checkbox Label */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            color: #D1D5DB;
+            user-select: none;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #06B6D4;
+        }
+
+        /* Help Button */
+        .help-button {
+            position: fixed;
+            bottom: 24px;
+            left: 24px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #06B6D4 0%, #0891B2 100%);
+            border: none;
+            color: #0B0F19;
+            font-size: 24px;
+            font-weight: 700;
+            cursor: pointer;
+            box-shadow: 0 4px 16px rgba(6, 182, 212, 0.4);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .help-button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 24px rgba(6, 182, 212, 0.6);
+        }
+
+        .help-button:active {
+            transform: scale(0.95);
+        }
+
+        /* Help Panel */
+        .help-panel {
+            position: fixed;
+            bottom: 90px;
+            left: 24px;
+            width: 420px;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            padding: 24px;
+            z-index: 99;
+            opacity: 0;
+            transform: translateY(20px);
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .help-panel.visible {
+            opacity: 1;
+            transform: translateY(0);
+            pointer-events: all;
+        }
+
+        .help-panel::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .help-panel::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .help-panel::-webkit-scrollbar-thumb {
+            background: rgba(6, 182, 212, 0.3);
+            border-radius: 3px;
+        }
+
+        .help-panel h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 20px;
+            font-weight: 700;
+            color: #06B6D4;
+            margin: 0 0 16px 0;
+        }
+
+        .help-section {
+            margin-bottom: 24px;
+        }
+
+        .help-section h3 {
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            color: #9CA3AF;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0 0 12px 0;
+        }
+
+        .help-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #D1D5DB;
+        }
+
+        .help-item-icon {
+            flex-shrink: 0;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #06B6D4;
+            margin-top: 6px;
+        }
+
+        .help-key {
+            display: inline-block;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 4px;
+            padding: 2px 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            font-weight: 600;
+            color: #06B6D4;
+            margin: 0 2px;
+        }
+
+        .checkbox-label:hover span {
+            color: #F3F4F6;
+        }
+
+        /* Speed Control */
+        .speed-control {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .speed-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #9CA3AF;
+            padding: 6px 10px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            min-width: 42px;
+            text-align: center;
+        }
+
+        .speed-btn:hover {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: rgba(255, 255, 255, 0.2);
+            color: #D1D5DB;
+        }
+
+        .speed-btn.active {
+            background: rgba(6, 182, 212, 0.2);
+            border-color: #06B6D4;
+            color: #06B6D4;
+            font-weight: 600;
+        }
+
+        /* Legend */
+        .legend {
+            position: absolute;
+            bottom: 24px;
+            right: 24px;
+            z-index: 10;
+            padding: 16px;
+        }
+
+        .legend-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 13px;
+            color: #D1D5DB;
+        }
+
+        .legend-color {
+            width: 24px;
+            height: 4px;
+            border-radius: 2px;
+            box-shadow: 0 0 8px currentColor;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .controls-panel {
+                width: 300px;
+            }
+
+            .math-panel {
+                width: 280px;
+            }
+
+            .timeline-control {
+                width: calc(100vw - 48px);
+            }
+        }
+
+        /* Mobile Responsive Styles */
+        @media (max-width: 768px) {
+            /* Stack panels vertically */
+            .controls-panel {
+                position: relative;
+                top: auto;
+                left: 0;
+                right: 0;
+                width: 100%;
+                max-width: 100%;
+                max-height: none;
+                border-radius: 0;
+                padding: 16px;
+                margin-bottom: 80px;
+            }
+
+            .math-panel {
+                top: auto;
+                bottom: 0;
+                right: 0;
+                left: 0;
+                width: 100%;
+                max-width: 100%;
+                border-radius: 16px 16px 0 0;
+                padding: 16px;
+            }
+
+            /* Larger touch targets */
+            .preset-chip {
+                padding: 14px 18px;
+                font-size: 15px;
+                min-height: 48px;
+            }
+
+            .matrix-grid input {
+                padding: 18px;
+                font-size: 28px;
+                min-height: 60px;
+            }
+
+            .control-btn,
+            .speed-btn {
+                padding: 12px 18px;
+                font-size: 15px;
+                min-height: 44px;
+            }
+
+            .randomize-btn,
+            .clear-vectors-btn {
+                padding: 14px 20px;
+                font-size: 15px;
+                min-height: 48px;
+            }
+
+            /* Help button positioning */
+            .help-button {
+                bottom: 90px;
+                left: 16px;
+            }
+
+            .help-panel {
+                bottom: 156px;
+                left: 16px;
+                right: 16px;
+                width: auto;
+                max-height: 60vh;
+            }
+
+            /* Hide legend on small screens */
+            .legend {
+                display: none;
+            }
+
+            /* Make playback controls stack better */
+            .playback-controls {
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .scrubber-container {
+                min-width: 100%;
+            }
+        }
+
+        /* Extra small screens */
+        @media (max-width: 480px) {
+            .preset-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                flex-direction: column;
+            }
+
+            .control-btn {
+                width: 100%;
+            }
+        }
+    </style>
+    <link rel="stylesheet" href="shared/styles.css">
+    <style>
+        /* Adjust for navigation header */
+        .controls-panel {
+            top: 84px;
+        }
+
+        .math-panel {
+            top: 84px;
+        }
+
+        .nav-action-btn {
+            margin-left: auto;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            color: var(--cyan-primary);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .nav-action-btn:hover {
+            background: rgba(6, 182, 212, 0.2);
+            transform: translateX(2px);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation Header -->
+    <nav class="nav-header">
+        <a href="index.html" class="nav-home">← Linear Algebra Visualizer</a>
+        <div class="nav-breadcrumb">
+            <span class="separator">/</span>
+            <span class="current">Eigenvectors & Eigenvalues</span>
+        </div>
+        <a href="diagonalization.html" class="nav-action-btn">Explore Diagonalization →</a>
+    </nav>
+
+    <!-- Full Screen Canvas -->
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <!-- Left Control Panel -->
+    <aside class="controls-panel glass-panel">
+        <!-- Matrix Input -->
+        <div class="matrix-container">
+            <div class="section-header">Transformation Matrix</div>
+            <div class="matrix-label">A =</div>
+            <div class="matrix-bracket-wrapper">
+                <div class="matrix-grid">
+                    <input type="number" id="a11" value="2" step="0.1">
+                    <input type="number" id="a12" value="1" step="0.1">
+                    <input type="number" id="a21" value="1" step="0.1">
+                    <input type="number" id="a22" value="2" step="0.1">
+                </div>
+            </div>
+            <button class="randomize-btn" id="randomizeBtn" onclick="app.randomizeMatrix()">
+                🎲 Randomize
+            </button>
+        </div>
+
+        <!-- Preset Grid -->
+        <div class="preset-carousel">
+            <div class="section-header">Presets</div>
+            <div class="preset-grid">
+                <div class="preset-chip" data-preset="rotation">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
+                        <path d="M21 3v5h-5"></path>
+                    </svg>
+                    <span>Rotation</span>
+                </div>
+                <div class="preset-chip" data-preset="scaling">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M12 5v14M5 12h14"></path>
+                        <path d="M9 9L5 5M15 9l4-4M15 15l4 4M9 15l-4 4"></path>
+                    </svg>
+                    <span>Scaling</span>
+                </div>
+                <div class="preset-chip" data-preset="shearX">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 8h10l2 8H8z"></path>
+                    </svg>
+                    <span>Shear X</span>
+                </div>
+                <div class="preset-chip" data-preset="shearY">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M8 6h8l2 10h-8z"></path>
+                    </svg>
+                    <span>Shear Y</span>
+                </div>
+                <div class="preset-chip" data-preset="reflection">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="12" y1="4" x2="12" y2="20" stroke-dasharray="2,2"></line>
+                        <circle cx="8" cy="10" r="1.5" fill="currentColor"></circle>
+                        <circle cx="16" cy="10" r="1.5" fill="currentColor"></circle>
+                        <path d="M8 10v6M16 10v6"></path>
+                    </svg>
+                    <span>Reflection</span>
+                </div>
+                <div class="preset-chip" data-preset="projection">
+                    <svg viewBox="0 0 24 24">
+                        <line x1="4" y1="18" x2="20" y2="18" stroke-width="2.5"></line>
+                        <path d="M7 6v8M12 4v10M17 7v7"></path>
+                        <circle cx="7" cy="18" r="1.5" fill="currentColor"></circle>
+                        <circle cx="12" cy="18" r="1.5" fill="currentColor"></circle>
+                        <circle cx="17" cy="18" r="1.5" fill="currentColor"></circle>
+                    </svg>
+                    <span>Projection</span>
+                </div>
+                <div class="preset-chip" data-preset="squeeze">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M6 6l12 12M18 6L6 18"></path>
+                        <path d="M9 6L6 9M18 15l-3 3M6 15l3 3M15 6l3 3"></path>
+                    </svg>
+                    <span>Squeeze</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Custom Vectors Control -->
+        <div class="custom-vectors-control" style="margin-bottom: 24px;">
+            <button class="clear-vectors-btn" id="clearVectorsBtn" onclick="app.clearCustomVectors()">
+                🗑️ Clear Custom Vectors
+            </button>
+        </div>
+
+        <!-- Visualization Options -->
+        <div class="visualization-options" style="margin-bottom: 24px;">
+            <label class="checkbox-label">
+                <input type="checkbox" id="showDeterminant" checked onchange="app.toggleDeterminant(this.checked)">
+                <span>Show Determinant Visualization</span>
+            </label>
+        </div>
+
+        <!-- Transform Description -->
+        <div class="transform-description" id="transformDesc">
+            <div class="desc-title">Select a preset or enter custom values</div>
+            <div id="transformDescText">Experiment with different transformations to see how they affect vectors in 2D space.</div>
+        </div>
+    </aside>
+
+    <!-- Right Math Panel -->
+    <aside class="math-panel glass-panel">
+        <div class="section-header">Eigen Analysis</div>
+
+        <!-- Characteristic Equation -->
+        <div id="charEquation">
+            <!-- Dynamically populated -->
+        </div>
+
+        <div class="eigen-cards" id="eigenCards">
+            <!-- Dynamically populated -->
+        </div>
+    </aside>
+
+    <!-- Bottom Timeline Control -->
+    <div class="timeline-control glass-panel">
+        <div class="playback-controls">
+            <button class="play-button" id="playBtn" onclick="app.togglePlay()">▶</button>
+
+            <div class="scrubber-container">
+                <div class="scrubber-track" id="scrubberTrack">
+                    <div class="scrubber-progress" id="scrubberProgress"></div>
+                    <div class="scrubber-handle" id="scrubberHandle"></div>
+                </div>
+                <div class="scrubber-labels">
+                    <span>Identity (I)</span>
+                    <span id="progressPercent">0%</span>
+                    <span>Target (A)</span>
+                </div>
+            </div>
+
+            <div class="control-buttons">
+                <button class="control-btn" onclick="app.stepForward()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M5 12h14M12 5l7 7-7 7"></path>
+                    </svg>
+                    <span>Step</span>
+                </button>
+                <button class="control-btn reset" onclick="app.reset()">
+                    <svg viewBox="0 0 24 24">
+                        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                        <path d="M3 3v5h5"></path>
+                    </svg>
+                    <span>Reset</span>
+                </button>
+            </div>
+
+            <div class="speed-control">
+                <button class="speed-btn" data-speed="0.5" onclick="app.setSpeed(0.5)">0.5×</button>
+                <button class="speed-btn active" data-speed="1" onclick="app.setSpeed(1)">1×</button>
+                <button class="speed-btn" data-speed="2" onclick="app.setSpeed(2)">2×</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend glass-panel">
+        <div class="legend-items">
+            <div class="legend-item">
+                <div class="legend-color" style="background: #06B6D4; color: #06B6D4;"></div>
+                <span>Eigenvector 1</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #EC4899; color: #EC4899;"></div>
+                <span>Eigenvector 2</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: #FCD34D; color: #FCD34D;"></div>
+                <span>Test Vectors (After)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color" style="background: rgba(156, 163, 175, 0.5); color: rgba(156, 163, 175, 0.5); border: 1px dashed rgba(156, 163, 175, 0.8);"></div>
+                <span>Test Vectors (Before)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Help Button -->
+    <button class="help-button" id="helpBtn" onclick="app.toggleHelp()">?</button>
+
+    <!-- Help Panel -->
+    <div class="help-panel" id="helpPanel">
+        <h2>Guide & Shortcuts</h2>
+
+        <div class="help-section">
+            <h3>⌨️ Keyboard Shortcuts</h3>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">Space</span> Play/Pause animation</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">→</span> Step forward</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">←</span> Step backward</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">R</span> Randomize matrix</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">H</span> Toggle help panel</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">C</span> Clear custom vectors</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><span class="help-key">1-7</span> Load presets (Rotation, Scaling, Shear X/Y, Reflection, Projection, Squeeze)</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>🖱️ Mouse Controls</h3>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Scroll wheel</strong> - Zoom in/out</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Click & drag on canvas</strong> - Draw custom vectors</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Drag eigenvector tips</strong> - Reconstruct transformation matrix</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Hover over eigenvectors</strong> - See scaling information</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Features</h3>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Eigenvectors</strong> - Cyan and pink vectors that maintain direction during transformation</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Determinant visualization</strong> - Shows area scaling factor (det = λ₁ × λ₂)</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Randomize</strong> - Generate random transformation matrices</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Custom vectors</strong> - Draw your own vectors to see how they transform</div>
+            </div>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div><strong>Animation speed</strong> - Control transformation speed (0.5×, 1×, 2×)</div>
+            </div>
+        </div>
+
+        <div class="help-section">
+            <h3>Understanding Eigenvectors</h3>
+            <div class="help-item">
+                <div class="help-item-icon"></div>
+                <div>Eigenvectors only scale (stretch/compress), they don't rotate. Yellow test vectors show typical transformation behavior for comparison.</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="shared/matrix.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

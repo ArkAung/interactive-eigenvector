@@ -1,0 +1,183 @@
+/* Common Design System for Linear Algebra Visualizer Suite */
+
+:root {
+    /* Colors */
+    --bg-primary: #0B0F19;
+    --bg-secondary: rgba(15, 23, 42, 0.85);
+    --bg-glass: rgba(15, 23, 42, 0.6);
+
+    --cyan-primary: #06B6D4;
+    --cyan-secondary: #0891B2;
+    --magenta-primary: #EC4899;
+    --purple-primary: #A78BFA;
+    --red-primary: #F87171;
+
+    --text-primary: #F9FAFB;
+    --text-secondary: #E5E7EB;
+    --text-tertiary: #D1D5DB;
+    --text-muted: #9CA3AF;
+
+    --border-color: rgba(255, 255, 255, 0.08);
+    --border-hover: rgba(255, 255, 255, 0.2);
+
+    /* Typography */
+    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+
+    /* Spacing */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 32px;
+
+    /* Border Radius */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+
+    /* Shadows */
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3), 0 1px 2px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+    --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: var(--font-sans);
+    background: var(--bg-primary);
+    color: var(--text-secondary);
+    overflow-x: hidden;
+}
+
+/* Glassmorphism Panel */
+.glass-panel {
+    background: var(--bg-secondary);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+}
+
+/* Button Base Styles */
+.btn {
+    padding: 10px 16px;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    font-family: var(--font-sans);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    box-shadow: var(--shadow-sm);
+}
+
+.btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
+}
+
+.btn:active {
+    transform: scale(0.98);
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--cyan-primary) 0%, var(--cyan-secondary) 100%);
+    color: var(--bg-primary);
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
+    color: var(--text-tertiary);
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: var(--border-hover);
+}
+
+/* Navigation Header */
+.nav-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 60px;
+    background: var(--bg-secondary);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 var(--spacing-lg);
+    z-index: 1000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.nav-header .nav-home {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--cyan-primary);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.nav-header .nav-home:hover {
+    color: var(--cyan-secondary);
+    transform: translateX(-2px);
+}
+
+.nav-breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-left: var(--spacing-md);
+}
+
+.nav-breadcrumb .separator {
+    color: var(--border-color);
+}
+
+.nav-breadcrumb .current {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* Section Header */
+.section-header {
+    font-family: var(--font-sans);
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--text-muted);
+    margin-bottom: var(--spacing-md);
+}
+
+/* Utility Classes */
+.text-cyan { color: var(--cyan-primary); }
+.text-magenta { color: var(--magenta-primary); }
+.text-purple { color: var(--purple-primary); }
+.text-muted { color: var(--text-muted); }
+
+.mt-sm { margin-top: var(--spacing-sm); }
+.mt-md { margin-top: var(--spacing-md); }
+.mt-lg { margin-top: var(--spacing-lg); }
+
+.mb-sm { margin-bottom: var(--spacing-sm); }
+.mb-md { margin-bottom: var(--spacing-md); }
+.mb-lg { margin-bottom: var(--spacing-lg); }
