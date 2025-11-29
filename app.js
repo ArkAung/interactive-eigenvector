@@ -59,6 +59,7 @@ class EigenvectorApp {
         this.setupPresetChips();
         this.setupMouseTracking();
         this.setupKeyboardShortcuts();
+        this.setupNavigationButton();
         this.syncDeterminantCheckbox();
         this.updateMatrixFromInputs();
         this.draw();
@@ -601,6 +602,24 @@ class EigenvectorApp {
         });
     }
 
+    setupNavigationButton() {
+        // Update the diagonalization link with current matrix whenever the matrix changes
+        const updateDiagonalizationLink = () => {
+            const navBtn = document.querySelector('.nav-action-btn');
+            if (navBtn) {
+                const matrix = this.targetMatrix;
+                const matrixParam = `${matrix.a},${matrix.b},${matrix.c},${matrix.d}`;
+                navBtn.href = `diagonalization.html?matrix=${matrixParam}`;
+            }
+        };
+
+        // Update link initially
+        updateDiagonalizationLink();
+
+        // Store reference to update function so other methods can call it
+        this.updateDiagonalizationLink = updateDiagonalizationLink;
+    }
+
     setProgress(progress) {
         this.animationProgress = Math.max(0, Math.min(1, progress));
         const t = this.easeInOutCubic(this.animationProgress);
@@ -634,6 +653,11 @@ class EigenvectorApp {
             const t = this.easeInOutCubic(this.animationProgress);
             this.currentMatrix = Matrix2D.lerp(Matrix2D.identity(), this.targetMatrix, t);
             this.draw();
+        }
+
+        // Update navigation link with new matrix
+        if (this.updateDiagonalizationLink) {
+            this.updateDiagonalizationLink();
         }
     }
 
@@ -721,6 +745,11 @@ class EigenvectorApp {
 
         this.updateInfo();
         this.reset();
+
+        // Update navigation link with new matrix
+        if (this.updateDiagonalizationLink) {
+            this.updateDiagonalizationLink();
+        }
     }
 
     togglePlay() {
@@ -883,6 +912,11 @@ class EigenvectorApp {
 
         // Force a redraw
         this.draw();
+
+        // Update navigation link with new matrix
+        if (this.updateDiagonalizationLink) {
+            this.updateDiagonalizationLink();
+        }
     }
 
     reconstructMatrixFromEigenvectors(v1, lambda1, v2, lambda2) {
